@@ -199,7 +199,8 @@ Hecho cuando: ./mvnw verify pasa e incluye un test con Testcontainers que crea u
 Al terminar, cualquiera del equipo clona el repo, se conecta a su propia rama de Neon y abre Claude Code con el contexto ya cargado.
 
 - [x] Crear el repo en GitHub con la estructura de arriba y `.gitignore` para Java, Node y Android.
-- [ ] Proteger `main` y agregar a los compañeros como colaboradores (ver "Ramas y protección de `main`").
+- [x] Proteger `main` (ver "Ramas y protección de `main`").
+- [ ] Agregar a los compañeros como colaboradores con permiso *Write*.
 - [x] Copiar el `CLAUDE.md` raíz y crear uno corto en `api/`, `panel-web/` y `app-android/`.
 - [x] `.env.example` con la conexión a Neon, el secreto JWT y los orígenes CORS (sin valores reales).
 - [ ] Crear el proyecto en Neon, una rama por persona e invitar al equipo (ver "Configurar Neon").
