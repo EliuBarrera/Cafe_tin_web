@@ -76,10 +76,15 @@ Consecuencias:
 ### Mapeo JPA
 
 - `hibernate.default_schema=cafetin`, `ddl-auto: validate`.
-- Enums nativos de PostgreSQL: `@Enumerated(EnumType.STRING)` y `stringtype=unspecified` en la URL JDBC.
+- Enums nativos de PostgreSQL: `@Enumerated(EnumType.STRING)` + `@Column(columnDefinition = "<tipo>_enum")`
+  (sin `columnDefinition`, `ddl-auto: validate` falla) y `stringtype=unspecified` en cada conexión.
 - Cada conexión fija `currentSchema=cafetin` (application.yml): las funciones de los triggers nombran
   tablas sin esquema y fallan si el `search_path` es `public`. No lo quites.
 - `Usuario` y `Notificacion`: `@Inheritance(strategy = JOINED)`; `Usuario` usa `@DiscriminatorColumn(name = "tipo_usuario")`.
+- Entidades en `<modulo>.modelo` (p. ej. `pedidos.modelo.Pedido`). `Notificacion` está en `comun.modelo`.
+- Columnas con DEFAULT de fecha (`fecha_registro`, `fecha_hora`, `fecha`…): `@Generated` + `insertable = false`.
+  La hora la pone la base (Lima); no uses `LocalDateTime.now()` de Java para guardarlas.
+- Relación LAZY hacia `Usuario` = proxy de la clase base: `instanceof Dueno` da `false`. Usa `getTipoUsuario()`.
 
 ## Arquitectura de la API
 
