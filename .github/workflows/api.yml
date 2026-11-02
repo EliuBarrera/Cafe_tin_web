@@ -1,0 +1,39 @@
+name: API
+
+# Corre ./mvnw verify (tests con Testcontainers) en cada PR que toque la API.
+# Mientras no exista api/pom.xml (Fase 1), el job se salta sin fallar.
+on:
+  pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/api.yml"
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ¿Existe el proyecto Maven?
+        id: proyecto
+        run: |
+          if [ -f pom.xml ]; then echo "existe=true" >> "$GITHUB_OUTPUT"; else echo "existe=false" >> "$GITHUB_OUTPUT"; echo "Aún no hay api/pom.xml: se omite."; fi
+
+      - uses: actions/setup-java@v4
+        if: steps.proyecto.outputs.existe == 'true'
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      # Docker ya viene en ubuntu-latest: Testcontainers lo usa para PostgreSQL 16.
+      - name: Tests
+        if: steps.proyecto.outputs.existe == 'true'
+        run: ./mvnw -B verify

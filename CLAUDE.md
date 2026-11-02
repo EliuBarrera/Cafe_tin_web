@@ -10,18 +10,27 @@ Actores: **Estudiante** (pide, paga, recoge) · **Trabajador** (despacha) · **D
 
 ```
 api/           Spring Boot 3 · Java 17+ · Maven · PostgreSQL 16 · Flyway
-panel-web/     React 18 + TypeScript (Vite) · React Router · TanStack Query      [PROPUESTA — confirmar]
+panel-web/     React 18 + TypeScript (Vite) · React Router · TanStack Query
 app-android/   Kotlin + Jetpack Compose · MVVM · Retrofit · DataStore
 docs/          openapi.yaml (contrato), trazabilidad.md, análisis y diagramas
-docker-compose.yml   PostgreSQL 16 para desarrollo (credenciales en .env)
+.env.example   variables de entorno (conexión a Neon, JWT, CORS) sin valores reales
 ```
+
+Infraestructura:
+
+| Pieza | Dónde | Notas |
+|---|---|---|
+| Base de datos | **Neon** (PostgreSQL 16, AWS us-east-2) | Rama `main` = producción; una rama por persona para desarrollo (`dev-lizca`, `dev-eliu`, `dev-maria`) |
+| API | **Render** (contenedor Docker, región Ohio) | Conexión **directa** a Neon (no la *pooled*), `sslmode=require` |
+| Panel web | **Vercel** | Sitio estático de Vite; `VITE_API_URL` apunta a la API en Render |
+| App Android | APK firmado | Distribución directa, sin Play Store |
 
 Cada subcarpeta tiene su propio CLAUDE.md con reglas específicas.
 
 ## Comandos
 
 ```
-docker compose up -d                      # base de datos de desarrollo
+cp .env.example .env                      # y completar con la conexión de TU rama de Neon
 cd api && ./mvnw spring-boot:run          # API en :8080, Swagger en /swagger-ui.html
 cd api && ./mvnw verify                   # tests (requiere Docker: Testcontainers)
 cd panel-web && npm run dev | npm test
@@ -32,8 +41,14 @@ Una tarea está terminada solo cuando el comando de tests del módulo pasa.
 
 ## Base de datos
 
-- Esquema `cafetin`. Migraciones en `api/src/main/resources/db/migration/`:
-  `V1__esquema.sql` (modelo físico), `V2__datos_prueba.sql` (solo perfil `dev`).
+- Desarrollo contra tu rama de Neon; nunca contra la rama `main` de Neon (es producción).
+  Los tests no usan Neon: usan Testcontainers (requieren Docker local).
+- Zona horaria `America/Lima`: la fija V1 para la base (Neon trabaja en UTC). No la cambies en Java.
+- Esquema `cafetin`. Migraciones en `api/src/main/resources/db/migration/` (`V1__esquema.sql`, `V3+`);
+  datos de prueba en `api/src/main/resources/db/datos-dev/V2__datos_prueba.sql` (solo perfil `dev`).
+  Contraseña de todos los usuarios del seed: `Cafetin2026`.
+- `docs/01_…schema.sql` y `docs/02_…datos.sql` son el entregable académico original; la fuente
+  de verdad para la API son las migraciones (las diferencias están en su cabecera).
 - **Nunca edites una migración ya aplicada.** Cualquier cambio = nuevo archivo `V<n>__descripcion.sql`,
   y pregunta antes de crearlo.
 - Tablas y columnas en `snake_case` y en español. Precios `NUMERIC(8,2)`. Contraseñas con BCrypt.
@@ -46,7 +61,7 @@ Una tarea está terminada solo cuando el comando de tests del módulo pasa.
 |---|---|---|
 | `trg_calcular_total_pedido` | INSERT/UPDATE/DELETE en `detalle_pedido` | Recalcula `pedido.total` |
 | `trg_descontar_stock` | **UPDATE** de `pago` a `PAGADO` | Descuenta `inventario.cantidad_disponible` |
-| `trg_alerta_stock_minimo` | UPDATE de `inventario` que baja del mínimo | Inserta `notificacion` + `alerta_stock` para cada dueño |
+| `trg_alerta_stock_minimo` | UPDATE de `inventario` que **cruza** el mínimo o llega a 0 | Inserta `notificacion` + `alerta_stock` (`STOCK_BAJO` / `STOCK_AGOTADO`) para cada dueño. No cambia `producto.activo` |
 
 Consecuencias:
 - `pedido.total` y `detalle_pedido.subtotal` (columna GENERATED) son de **solo lectura** en JPA
@@ -120,14 +135,17 @@ Spring Security sin sesión + JWT. Roles `ESTUDIANTE`, `TRABAJADOR`, `DUENO`.
 ## Decisiones del equipo
 
 Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
-- [pendiente] Panel web: React + TypeScript vs Thymeleaf
+- 02/11/2026 · `usuario.fcm_token` va directo en V1 · V1 aún no se había aplicado; evita una V3 de parche.
+- 02/11/2026 · Producto agotado: el trigger ya no pone `activo = FALSE`; el catálogo muestra `AGOTADO` por `estado_stock` y `activo` es solo la baja manual del dueño (RF-19) · `activo` tenía dos significados y al recargar no se sabía si reactivar. Pendiente: actualizar RN-03 del informe.
+- 02/11/2026 · Alertas de stock solo al cruzar el mínimo o al llegar a 0 (cambio en `trg_alerta_stock_minimo`, V1) · antes se repetía una alerta en cada venta.
+- 02/11/2026 · `Documentación/` pasa a `docs/`.
+- 02/11/2026 · Base de datos en Neon, con una rama de Neon por persona para desarrollo; se elimina `docker-compose.yml` · sin PostgreSQL local y cada uno con sus datos.
+- 02/11/2026 · Panel web en React + TypeScript (Vite), desplegado en Vercel · Vercel aloja el sitio estático; Thymeleaf no podría ir ahí.
+- 02/11/2026 · API en Render como contenedor Docker · Vercel no ejecuta servidores Java.
 - [pendiente] Pasarela simulada
-- [pendiente] `usuario.fcm_token` (directo en V1 si aún no se aplicó; si no, migración V3)
-- [pendiente] Producto agotado: ¿`activo = FALSE` por trigger o filtro por `estado_stock`?
 - [pendiente] Tiempo real: polling cada 5 s en el panel; push FCM al estudiante
 - [pendiente] Pago en `EFECTIVO`: quitarlo de la app, o entra a despacho con pago `PENDIENTE` y se marca `PAGADO` al entregar
 - [pendiente] Cancelar pedido pagado: no permitido, o pago `REEMBOLSADO` + reponer stock en el servicio
-- [pendiente] Alertas de stock: solo al cruzar el mínimo (cambio en `trg_alerta_stock_minimo`) o deduplicar en el servicio
 
 ## Qué no hacer
 
@@ -135,5 +153,7 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - No agregues dependencias nuevas sin preguntar.
 - No modifiques triggers, vistas ni migraciones existentes por tu cuenta.
 - No hagas commits grandes que mezclen módulos: una rama y un PR por tarea.
+- Nunca hagas commit ni push a `main` (está protegida). Antes de editar, crea una rama desde `main`
+  actualizado con el formato `<tipo>/<paquete>-<tarea>` (`feat/`, `fix/`, `docs/`, `test/`, `chore/`).
 - No crees migraciones fuera del rango reservado del módulo (Lizca `V3`–`V9`, Eliú `V10`–`V19`, Maria `V20`–`V29`; ver "Reparto del equipo por módulos" en el plan).
 - No edites `SecurityConfig`, `application.yml`, el paquete `comun` ni las entidades compartidas fuera de un PR que revise su dueño.

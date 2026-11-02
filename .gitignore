@@ -1,0 +1,40 @@
+# --- Secretos ---
+.env
+*.env
+!.env.example
+**/google-services.json
+**/*service-account*.json
+*.jks
+*.keystore
+
+# --- Sistema / IDE ---
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# --- Java / Maven (api/) ---
+api/target/
+!api/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+hs_err_pid*
+
+# --- Node / Vite (panel-web/) ---
+panel-web/node_modules/
+panel-web/dist/
+panel-web/coverage/
+npm-debug.log*
+
+# --- Android / Gradle (app-android/) ---
+app-android/.gradle/
+app-android/build/
+app-android/app/build/
+app-android/local.properties
+app-android/captures/
+app-android/.externalNativeBuild/
+app-android/.cxx/
+*.apk
+*.aab
