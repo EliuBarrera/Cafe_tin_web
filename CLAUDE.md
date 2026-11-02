@@ -77,15 +77,26 @@ Paquetes por módulo y, dentro, capas `controller` → `service` → `repository
 `PENDIENTE` (pagado) → `CONFIRMADO` (RF-11, asigna trabajador) → `EN_PREPARACION` → `LISTO` (RF-12)
 → `ENTREGADO` (RF-14, exige recibo verificado, RF-13). `CANCELADO` solo desde `PENDIENTE`.
 Una sola clase decide las transiciones; cualquier otra → HTTP 409.
+`PENDIENTE` cubre pedidos pagados y sin pagar: lo que los distingue es `pago.estado`, no `pedido.estado`.
 
 Métodos de pago: `YAPE`, `PLIN`, `TARJETA`, `EFECTIVO`. Pasarela **simulada** detrás de la interfaz
 `PasarelaPago` [PROPUESTA — confirmar]. No se guardan datos de tarjeta, solo `referencia`.
+
+### Pagos y códigos
+
+- `pago` tiene `UNIQUE(id_pedido)`: un reintento tras `FALLIDO` **actualiza la misma fila**, nunca inserta otra.
+- `pago.monto` = `pedido.total` refrescado de la BD; nunca un monto que mande el cliente.
+- `codigo_pedido`: `PED-<secuencia>` sin relleno fijo (cabe en `VARCHAR(12)`).
+- `recibo.codigo_verificacion`: formato `DR-<nº>-<4 dígitos aleatorios>` (informe, Tabla 16); reintentar si choca con el `UNIQUE`.
 
 ### Seguridad
 
 Spring Security sin sesión + JWT. Roles `ESTUDIANTE`, `TRABAJADOR`, `DUENO`.
 - `/api/auth/**` público · `/api/pedidos/**` ESTUDIANTE · `/api/despacho/**` TRABAJADOR y DUENO
-- `/api/inventario/**`, `/api/productos/**` (escritura), `/api/alertas/**`, `/api/reportes/**`, `/api/trabajadores/**` → solo DUENO (RNF-05)
+- `/api/inventario/**`, `/api/productos/**`, `/api/alertas/**`, `/api/reportes/**`, `/api/trabajadores/**` → solo DUENO (RNF-05)
+- `GET /api/catalogo` y `GET /api/categorias` → autenticado · escritura en `/api/categorias/**` y `/api/proveedores/**` → DUENO
+- `/api/usuarios/me/**` → autenticado · cualquier otra ruta → denegada
+- `GET /api/pedidos/{id}`: solo el estudiante dueño del pedido; uno ajeno → 404.
 - Token de recuperación de contraseña: guardar hash, con expiración.
 
 ## Pruebas
@@ -93,7 +104,8 @@ Spring Security sin sesión + JWT. Roles `ESTUDIANTE`, `TRABAJADOR`, `DUENO`.
 - Integración con **Testcontainers (PostgreSQL 16)**. No uses H2: no ejecuta triggers PL/pgSQL, enums ni estas vistas.
 - Cada RF nuevo llega con al menos un test. Para reglas de negocio, escribe los tests primero.
 - Casos que siempre deben existir: total del pedido, descuento de stock al pagar, pago concurrente
-  de la última unidad (uno 409), transición inválida (409), acceso denegado por rol (403).
+  de la última unidad (uno 409), transición inválida (409), acceso denegado por rol (403),
+  pago rechazado y reintento (una sola fila en `pago`), pedido ajeno (404).
 
 ## Requisitos (referencia rápida)
 
@@ -110,9 +122,12 @@ Spring Security sin sesión + JWT. Roles `ESTUDIANTE`, `TRABAJADOR`, `DUENO`.
 Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - [pendiente] Panel web: React + TypeScript vs Thymeleaf
 - [pendiente] Pasarela simulada
-- [pendiente] `usuario.fcm_token` (migración V3)
+- [pendiente] `usuario.fcm_token` (directo en V1 si aún no se aplicó; si no, migración V3)
 - [pendiente] Producto agotado: ¿`activo = FALSE` por trigger o filtro por `estado_stock`?
 - [pendiente] Tiempo real: polling cada 5 s en el panel; push FCM al estudiante
+- [pendiente] Pago en `EFECTIVO`: quitarlo de la app, o entra a despacho con pago `PENDIENTE` y se marca `PAGADO` al entregar
+- [pendiente] Cancelar pedido pagado: no permitido, o pago `REEMBOLSADO` + reponer stock en el servicio
+- [pendiente] Alertas de stock: solo al cruzar el mínimo (cambio en `trg_alerta_stock_minimo`) o deduplicar en el servicio
 
 ## Qué no hacer
 
@@ -120,3 +135,5 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - No agregues dependencias nuevas sin preguntar.
 - No modifiques triggers, vistas ni migraciones existentes por tu cuenta.
 - No hagas commits grandes que mezclen módulos: una rama y un PR por tarea.
+- No crees migraciones fuera del rango reservado del módulo (Lizca `V3`–`V9`, Eliú `V10`–`V19`, Maria `V20`–`V29`; ver "Reparto del equipo por módulos" en el plan).
+- No edites `SecurityConfig`, `application.yml`, el paquete `comun` ni las entidades compartidas fuera de un PR que revise su dueño.
