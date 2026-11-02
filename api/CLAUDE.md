@@ -1,6 +1,6 @@
 # API — reglas del backend
 
-Spring Boot 3 · Java 17 · Maven · PostgreSQL 16 (Neon) · Flyway. Se despliega en Render como
+Spring Boot 4.1 · Java 21 · Maven · PostgreSQL 16 (Neon) · Flyway. Se despliega en Render como
 contenedor Docker. Lee primero el `CLAUDE.md` raíz (sección "Lo que hace la BD").
 
 ## Migraciones
@@ -20,7 +20,10 @@ contenedor Docker. Lee primero el `CLAUDE.md` raíz (sección "Lo que hace la BD
   Nunca escribas credenciales en `application.yml`.
 - Neon: usa la conexión **directa** (host sin `-pooler`) con `sslmode=require`. La *pooled*
   (PgBouncer en modo transacción) no sirve para Flyway.
-- URL JDBC con `stringtype=unspecified` (enums nativos de PostgreSQL).
+- Propiedades de conexión (en `application.yml`, no en la URL): `stringtype=unspecified` (enums nativos)
+  y `currentSchema=cafetin` (los triggers nombran tablas sin esquema; sin esto fallan desde la API).
+- Paquete raíz `pe.edu.ucv.cafetin`. Perfil por defecto `dev`; los tests usan `@ActiveProfiles("test")`
+  e `@Import(TestcontainersConfiguration.class)`.
 - Pool de Hikari pequeño (`maximum-pool-size: 5`): el plan gratuito de Neon limita conexiones.
 - Neon suspende la base sin uso: el primer request puede tardar ~1 s más. No lo "arregles" en código.
 - `spring.jpa.hibernate.ddl-auto: validate`, `hibernate.default_schema: cafetin`.

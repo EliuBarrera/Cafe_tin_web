@@ -1,0 +1,71 @@
+# Configuración común a todos los perfiles. Perfiles: dev (por defecto), test, prod.
+# Las credenciales llegan por variables de entorno (DB_URL, DB_USER, DB_PASSWORD).
+# En local se leen del .env de la raíz del repo (ver .env.example); en Render, de su panel.
+spring:
+  application:
+    name: cafetin-api
+  profiles:
+    default: dev
+  config:
+    import:
+      - optional:file:../.env[.properties]   # ./mvnw spring-boot:run desde api/
+      - optional:file:.env[.properties]      # ejecutando desde la raíz del repo
+
+  datasource:
+    url: ${DB_URL:}
+    username: ${DB_USER:}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 5            # el plan gratuito de Neon limita conexiones
+      # Zona horaria de Lima en cada conexión (V1 también la fija para la base).
+      connection-init-sql: SET TIME ZONE 'America/Lima'
+      data-source-properties:
+        stringtype: unspecified       # enums nativos de PostgreSQL (estado_pedido_enum, …)
+        # search_path = cafetin en cada conexión. Imprescindible: las funciones de los
+        # triggers usan nombres sin esquema (pedido, inventario…) y fallarían con 'public'.
+        currentSchema: cafetin
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate              # el esquema lo manda Flyway, Hibernate solo lo valida
+    properties:
+      hibernate:
+        default_schema: cafetin
+
+  flyway:
+    schemas: cafetin                  # crea el esquema y fija el search_path
+    default-schema: cafetin
+    locations: classpath:db/migration
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+---
+# Desarrollo: tu rama de Neon (dev-lizca, dev-eliu, dev-maria) + datos de prueba V2.
+spring:
+  config:
+    activate:
+      on-profile: dev
+  flyway:
+    locations: classpath:db/migration,classpath:db/datos-dev
+
+---
+# Tests: Testcontainers (PostgreSQL 16) aporta la conexión; sin datos de prueba.
+spring:
+  config:
+    activate:
+      on-profile: test
+
+---
+# Producción (Render + rama main de Neon): solo migraciones del esquema, sin Swagger.
+spring:
+  config:
+    activate:
+      on-profile: prod
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
