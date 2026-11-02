@@ -41,6 +41,8 @@ spring:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+  writer-with-order-by-keys: true     # salida estable: docs/openapi.yaml no cambia de orden
+  default-produces-media-type: application/json
 
 ---
 # Desarrollo: tu rama de Neon (dev-lizca, dev-eliu, dev-maria) + datos de prueba V2.

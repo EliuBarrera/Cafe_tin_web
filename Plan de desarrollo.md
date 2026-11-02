@@ -18,15 +18,15 @@ Desde el 9 nov, API, app y panel avanzan en paralelo sobre el contrato; las prue
 | --- | --- | --- |
 | Infraestructura (**cerrada 02/11**) | Neon (base de datos, una rama por persona), Render (API en Docker), Vercel (panel) | Neon es PostgreSQL real (triggers, enums, vistas) con ramas para trabajar sin pisarse; Vercel no ejecuta Java, por eso la API va en Render. |
 | Panel web: React 18 o Thymeleaf (**cerrada 02/11: React**) | React + TypeScript con Vite, en Vercel | El argumento del stack es "una API REST para dos clientes"; Thymeleaf renderiza en el servidor, no consume la API y obliga a una segunda configuración de seguridad (sesión además de JWT). Además hay experiencia previa en el equipo con React y TypeScript. |
-| Pago (RF-06): pasarela real o simulada | Simulada, detrás de una interfaz `PasarelaPago` | Una pasarela real exige cuenta comercial y no aporta a lo que evalúa el curso; la interfaz permite cambiarla después sin tocar el resto. |
-| Token de notificaciones (RF-08) | Columna `fcm_token` en `usuario`, en una migración V3 | El modelo físico no tiene dónde guardar el token del dispositivo, y sin él no se puede enviar un push. |
-| "Tiempo real" (RF-04, RF-10) | Polling cada 5 s en el panel; push FCM al estudiante | Cumple el requisito con poco riesgo; SSE queda como mejora si sobra tiempo. |
-| Producto agotado: ¿se oculta con `activo = FALSE`? | El catálogo muestra "AGOTADO" desde la vista y `activo` queda solo para la baja manual del dueño | Hoy `activo` significa dos cosas y, al recargar stock, no se sabe si reactivar el producto (ver Análisis, punto 7). |
+| Pago (RF-06): pasarela real o simulada (**cerrada 02/11: simulada**) | Simulada, detrás de una interfaz `PasarelaPago` | Una pasarela real exige cuenta comercial y no aporta a lo que evalúa el curso; la interfaz permite cambiarla después sin tocar el resto. |
+| Token de notificaciones (RF-08) (**cerrada 02/11: en V1**) | Columna `fcm_token` en `usuario`, en una migración V3 | El modelo físico no tiene dónde guardar el token del dispositivo, y sin él no se puede enviar un push. |
+| "Tiempo real" (RF-04, RF-10) (**cerrada 02/11: polling 5 s + FCM**) | Polling cada 5 s en el panel; push FCM al estudiante | Cumple el requisito con poco riesgo; SSE queda como mejora si sobra tiempo. |
+| Producto agotado: ¿se oculta con `activo = FALSE`? (**cerrada 02/11: no se oculta**) | El catálogo muestra "AGOTADO" desde la vista y `activo` queda solo para la baja manual del dueño | Hoy `activo` significa dos cosas y, al recargar stock, no se sabe si reactivar el producto (ver Análisis, punto 7). |
 | Migraciones | Flyway: V1 esquema, V2 datos de prueba, V3 en adelante para cambios | Todos trabajan con la misma BD y Claude Code no toca el esquema sin un archivo revisable. |
 | Orden de trabajo | Tres pistas paralelas tras congelar el contrato | Ver arriba. |
-| Pago en efectivo | Opción A: quitar `EFECTIVO` de la app. Opción B: el pedido en efectivo entra a despacho con pago `PENDIENTE` y el trabajador lo pasa a `PAGADO` al entregar (no reserva stock) | El informe (CU-02) dice que en efectivo se paga al recoger, pero el stock solo baja con `PAGADO` y el despacho filtra pagados: hoy el trabajador nunca vería esos pedidos. |
-| Estado del pedido tras pagar | Queda `PENDIENTE` y el trabajador lo confirma (RF-11); corregir la postcondición de CU-02 en el informe, que dice "Confirmado" | Plan e informe se contradicen. Pagado/no pagado se distingue por `pago.estado`, no por `pedido.estado`. |
-| Cancelar un pedido pagado | Opción A: solo se cancela sin pagar. Opción B: cancelar pagado = pago `REEMBOLSADO` + reponer stock en el servicio | No hay trigger que devuelva stock; sin regla, cancelar un pedido pagado pierde unidades. |
+| Pago en efectivo (**cerrada 02/11: opción A, sin efectivo en la v1**) | Opción A: quitar `EFECTIVO` de la app. Opción B: el pedido en efectivo entra a despacho con pago `PENDIENTE` y el trabajador lo pasa a `PAGADO` al entregar (no reserva stock) | El informe (CU-02) dice que en efectivo se paga al recoger, pero el stock solo baja con `PAGADO` y el despacho filtra pagados: hoy el trabajador nunca vería esos pedidos. |
+| Estado del pedido tras pagar (**cerrada: queda PENDIENTE**) | Queda `PENDIENTE` y el trabajador lo confirma (RF-11); corregir la postcondición de CU-02 en el informe, que dice "Confirmado" | Plan e informe se contradicen. Pagado/no pagado se distingue por `pago.estado`, no por `pedido.estado`. |
+| Cancelar un pedido pagado (**cerrada 02/11: opción A, solo sin pagar**) | Opción A: solo se cancela sin pagar. Opción B: cancelar pagado = pago `REEMBOLSADO` + reponer stock en el servicio | No hay trigger que devuelva stock; sin regla, cancelar un pedido pagado pierde unidades. |
 | Correcciones al esquema | Aplicarlas directo en `V1` al crearla (aún no se aplicó en ninguna BD): trigger de agotado, `fcm_token`, alertas solo al cruzar el mínimo | Evita migraciones de parche. Hay que reflejarlo en el informe (RN-03). |
 
 iOS queda fuera del alcance (informe, §2.4 Limitaciones).
@@ -233,8 +233,8 @@ Al cerrar Diseño, la API arranca contra PostgreSQL con las 14 entidades validad
 - [x] Paquetes por módulo (con `package-info.java`; las capas se crean al implementar) y, dentro de cada uno, capas `controller` / `service` / `repository` / `dto`: `cuentas`, `catalogo`, `pedidos`, `despacho`, `inventario`, `reportes`, `comun`. Así se ven los cinco paquetes del análisis y la arquitectura en capas que hay que sustentar.
 - [x] **PR 2.** Entidades (en `<modulo>.modelo`): `Usuario` abstracta (JOINED, discriminador `tipo_usuario`) con `Estudiante`, `Trabajador`, `Dueno`; `Notificacion` (JOINED) con `AlertaStock`; `Categoria`, `Proveedor`, `Producto`, `Inventario` (1:1), `Pedido`, `DetallePedido`, `Pago` (1:1), `Recibo` (1:1).
 - [x] Las 5 vistas como entidades de solo lectura (`@Immutable`), cada una con su `@Id` (`dia` en ingresos diarios, `id_producto` en más vendidos).
-- [ ] **PR 3.** Manejo de errores único (`@RestControllerAdvice`) con formato `{codigo, mensaje, detalles}`; violación de integridad → 409.
-- [ ] Contrato: todos los controllers con sus DTOs y respuesta 501, exportado a `docs/openapi.yaml` (ver Contrato de la API).
+- [x] **PR 3.** Manejo de errores único (`@RestControllerAdvice`) con formato `{codigo, mensaje, detalles}`; violación de integridad → 409.
+- [x] Contrato: todos los controllers con sus DTOs y respuesta 501, exportado a `docs/openapi.yaml` (ver Contrato de la API). `ContratoOpenApiTest` falla si el código se aparta del archivo. **PR 3.**
 - [x] Tests de humo con Testcontainers: el contexto arranca, Flyway aplica V1 (y V2 en `DatosDevTest`), los triggers calculan el total, descuentan stock solo con `UPDATE` a `PAGADO`, rechazan stock negativo y alertan sin duplicados. **PR 1.**
 
 Prompt sugerido:
@@ -411,39 +411,35 @@ Se publica una versión estable para la demo: base de datos en Neon (rama `main`
 
 Hecho cuando: la demo corre de punta a punta sobre la versión desplegada, sin depender de ninguna laptop del equipo.
 
-## Contrato de la API (propuesta para la Fase 1)
+## Contrato de la API (congelado el 02/11/2026)
 
-Estos endpoints cubren RF-01 a RF-22; se congelan en `docs/openapi.yaml` al cierre de la Fase 1 y cualquier cambio posterior se acuerda en el equipo. Las acciones de despacho usan `POST` porque son transiciones de estado, no ediciones.
+El contrato completo (cuerpos, validaciones, errores por operación) está en `docs/openapi.yaml`, generado desde el código; `ContratoOpenApiTest` falla si el código se aparta de él. Cualquier cambio se acuerda en el equipo y se regenera con `./mvnw test -Dtest=ContratoOpenApiTest -Dcontrato.actualizar=true`. Mientras un endpoint no está implementado responde 501 `NO_IMPLEMENTADO`. Las acciones de despacho usan `POST` porque son transiciones de estado, no ediciones.
 
 | Paquete | Método y ruta | Rol | RF |
 | --- | --- | --- | --- |
-| Cuentas | `POST /api/auth/registro` | Público | RF-01 |
-| Cuentas | `POST /api/auth/login` | Público | RF-01, RF-02 |
-| Cuentas | `POST /api/auth/recuperar` | Público | RF-03 |
-| Cuentas | `POST /api/auth/restablecer` | Público | RF-03 |
-| Cuentas | `GET /api/trabajadores` · `POST /api/trabajadores` | DUENO | RF-02 |
-| Cuentas | `PUT /api/usuarios/me/fcm-token` | Autenticado | RF-08 |
-| Pedidos | `GET /api/catalogo?categoria=` | Autenticado | RF-04 |
-| Pedidos | `GET /api/categorias` | Autenticado | RF-04 |
+| Cuentas | `POST /api/auth/registro` · `POST /api/auth/login` | Público | RF-01, RF-02 |
+| Cuentas | `POST /api/auth/recuperar` · `POST /api/auth/restablecer` | Público | RF-03 |
+| Cuentas | `GET /api/trabajadores` · `POST /api/trabajadores` · `PATCH /api/trabajadores/{id}/estado` | DUENO | RF-02 |
+| Cuentas | `GET /api/usuarios/me` · `PUT /api/usuarios/me/fcm-token` | Autenticado | RF-01, RF-08 |
+| Cuentas | `GET /api/usuarios/me/notificaciones` · `PATCH /api/usuarios/me/notificaciones/{id}/leida` | Autenticado | RF-08 |
+| Pedidos | `GET /api/catalogo?categoria=` · `GET /api/categorias` | Autenticado | RF-04 |
 | Pedidos | `POST /api/pedidos` | ESTUDIANTE | RF-05 |
-| Pedidos | `POST /api/pedidos/{id}/pago` | ESTUDIANTE | RF-06, RF-07, RF-16, RF-20 |
-| Pedidos | `POST /api/pedidos/{id}/cancelar` | ESTUDIANTE | RF-05 |
-| Pedidos | `GET /api/pedidos/{id}` | ESTUDIANTE (propio) | RF-08 |
-| Pedidos | `GET /api/pedidos/mios` | ESTUDIANTE | RF-09 |
-| Despacho | `GET /api/despacho/pedidos` | TRABAJADOR, DUENO | RF-10 |
-| Despacho | `POST /api/despacho/pedidos/{id}/confirmar` | TRABAJADOR, DUENO | RF-11 |
-| Despacho | `POST /api/despacho/pedidos/{id}/preparar` | TRABAJADOR, DUENO | RF-11 |
+| Pedidos | `POST /api/pedidos/{id}/pago` (YAPE, PLIN, TARJETA) | ESTUDIANTE | RF-06, RF-07, RF-16, RF-20 |
+| Pedidos | `POST /api/pedidos/{id}/cancelar` (solo sin pagar) | ESTUDIANTE | RF-05 |
+| Pedidos | `GET /api/pedidos/{id}` · `GET /api/pedidos/mios?pagina=&tamano=` | ESTUDIANTE (propio) | RF-07, RF-08, RF-09 |
+| Despacho | `GET /api/despacho/pedidos?estado=` | TRABAJADOR, DUENO | RF-10 |
+| Despacho | `POST /api/despacho/pedidos/{id}/confirmar` · `/preparar` | TRABAJADOR, DUENO | RF-11 |
 | Despacho | `POST /api/despacho/pedidos/{id}/listo` | TRABAJADOR, DUENO | RF-12 |
 | Despacho | `POST /api/despacho/pedidos/{id}/verificar` | TRABAJADOR, DUENO | RF-13 |
 | Despacho | `POST /api/despacho/pedidos/{id}/entregar` | TRABAJADOR, DUENO | RF-14 |
-| Inventario | `GET /api/productos` · `POST /api/productos` | DUENO | RF-15 |
+| Inventario | `GET /api/productos?activo=` · `GET /api/productos/{id}` · `POST /api/productos` | DUENO | RF-15, RF-19 |
 | Inventario | `PUT /api/productos/{id}` · `PATCH /api/productos/{id}/estado` | DUENO | RF-19 |
 | Inventario | `PATCH /api/inventario/{idProducto}/recarga` | DUENO | RF-18 |
-| Inventario | `GET /api/alertas` · `PATCH /api/alertas/{id}/atendida` | DUENO | RF-17 |
-| Inventario | CRUD `/api/categorias` y `/api/proveedores` (escritura) | DUENO | RF-15 |
-| Ingresos | `GET /api/reportes/ingresos?periodo=dia\|semana\|mes` | DUENO | RF-21 |
-| Ingresos | `GET /api/reportes/mas-vendidos` | DUENO | RF-22 |
-| Ingresos | `GET /api/reportes/ventas` | DUENO | RF-20 |
+| Inventario | `GET /api/alertas?atendida=` · `PATCH /api/alertas/{id}/atendida` | DUENO | RF-17 |
+| Inventario | `POST`, `PUT /{id}`, `PATCH /{id}/estado` en `/api/categorias`; CRUD de `/api/proveedores` | DUENO | RF-15 |
+| Ingresos | `GET /api/reportes/ingresos?periodo=DIA\|SEMANA\|MES&desde=&hasta=` | DUENO | RF-21 |
+| Ingresos | `GET /api/reportes/mas-vendidos?limite=` | DUENO | RF-22 |
+| Ingresos | `GET /api/reportes/ventas?desde=&hasta=&pagina=&tamano=` | DUENO | RF-20 |
 
 ## Riesgos y mitigaciones
 
