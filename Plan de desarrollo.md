@@ -111,7 +111,7 @@ gestion-cafetin/
    - **Require a pull request before merging**, con **Required approvals: 1** y **Dismiss stale pull request approvals when new commits are pushed**.
    - **Require status checks to pass** → agregar el check `verify` del workflow `API` (aparece en la lista después de que corra una vez en un PR).
 6. **Create**.
-7. Agregar a los compañeros: **Settings** → **Collaborators** → **Add people** (con permiso *Write*).
+7. Agregar a los compañeros: **Settings** → **Collaborators** → **Add people** y cada uno acepta la invitación (en un repo personal, todo colaborador recibe permiso de escritura).
 
 Para comprobarlo: un `git push origin main` directo debe ser rechazado con un mensaje de que la rama está protegida.
 
@@ -200,7 +200,7 @@ Al terminar, cualquiera del equipo clona el repo, se conecta a su propia rama de
 
 - [x] Crear el repo en GitHub con la estructura de arriba y `.gitignore` para Java, Node y Android.
 - [x] Proteger `main` (ver "Ramas y protección de `main`").
-- [ ] Agregar a los compañeros como colaboradores con permiso *Write*.
+- [ ] Agregar a los compañeros como colaboradores: Lizca ✓, Maria pendiente.
 - [x] Copiar el `CLAUDE.md` raíz y crear uno corto en `api/`, `panel-web/` y `app-android/`.
 - [x] `.env.example` con la conexión a Neon, el secreto JWT y los orígenes CORS (sin valores reales).
 - [ ] Crear el proyecto en Neon, una rama por persona e invitar al equipo (ver "Configurar Neon").
