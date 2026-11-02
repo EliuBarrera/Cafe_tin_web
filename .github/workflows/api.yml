@@ -30,7 +30,7 @@ jobs:
         if: steps.proyecto.outputs.existe == 'true'
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
           cache: maven
 
       # Docker ya viene en ubuntu-latest: Testcontainers lo usa para PostgreSQL 16.

@@ -9,7 +9,7 @@ Actores: **Estudiante** (pide, paga, recoge) · **Trabajador** (despacha) · **D
 ## Estructura del repo
 
 ```
-api/           Spring Boot 3 · Java 17+ · Maven · PostgreSQL 16 · Flyway
+api/           Spring Boot 4.1 · Java 21 · Maven · PostgreSQL 16 · Flyway
 panel-web/     React 18 + TypeScript (Vite) · React Router · TanStack Query
 app-android/   Kotlin + Jetpack Compose · MVVM · Retrofit · DataStore
 docs/          openapi.yaml (contrato), trazabilidad.md, análisis y diagramas
@@ -77,6 +77,8 @@ Consecuencias:
 
 - `hibernate.default_schema=cafetin`, `ddl-auto: validate`.
 - Enums nativos de PostgreSQL: `@Enumerated(EnumType.STRING)` y `stringtype=unspecified` en la URL JDBC.
+- Cada conexión fija `currentSchema=cafetin` (application.yml): las funciones de los triggers nombran
+  tablas sin esquema y fallan si el `search_path` es `public`. No lo quites.
 - `Usuario` y `Notificacion`: `@Inheritance(strategy = JOINED)`; `Usuario` usa `@DiscriminatorColumn(name = "tipo_usuario")`.
 
 ## Arquitectura de la API
@@ -142,6 +144,7 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 02/11/2026 · Base de datos en Neon, con una rama de Neon por persona para desarrollo; se elimina `docker-compose.yml` · sin PostgreSQL local y cada uno con sus datos.
 - 02/11/2026 · Panel web en React + TypeScript (Vite), desplegado en Vercel · Vercel aloja el sitio estático; Thymeleaf no podría ir ahí.
 - 02/11/2026 · API en Render como contenedor Docker · Vercel no ejecuta servidores Java.
+- 02/11/2026 · Spring Boot 4.1 y Java 21 (no Boot 3) · Spring Initializr ya no ofrece Boot 3, que dejó de recibir parches gratuitos. Pendiente: actualizar el informe.
 - [pendiente] Pasarela simulada
 - [pendiente] Tiempo real: polling cada 5 s en el panel; push FCM al estudiante
 - [pendiente] Pago en `EFECTIVO`: quitarlo de la app, o entra a despacho con pago `PENDIENTE` y se marca `PAGADO` al entregar

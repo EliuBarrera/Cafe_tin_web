@@ -76,7 +76,7 @@ gestion-cafetin/
 ├── .env.example               variables: conexión a Neon, JWT, CORS (sin secretos reales)
 ├── .github/workflows/api.yml  CI: ./mvnw verify en cada PR
 ├── docs/                      análisis, diagramas, openapi.yaml, matriz de trazabilidad
-├── api/                       Spring Boot 3 · Java 17+ · Maven
+├── api/                       Spring Boot 4.1 · Java 21 · Maven
 │   ├── CLAUDE.md              reglas del backend
 │   └── src/main/resources/db/migration/   V1 esquema, V2 datos, V3…
 ├── panel-web/                 React 18 + TypeScript (Vite)
@@ -228,14 +228,14 @@ Hecho cuando: cada integrante tiene su rama en Neon y su `.env` local, y conecta
 
 Al cerrar Diseño, la API arranca contra PostgreSQL con las 14 entidades validadas por Hibernate (`ddl-auto: validate`) y el contrato OpenAPI queda congelado para que app y panel empiecen en paralelo.
 
-- [ ] Proyecto Spring Boot 3 con Web, Data JPA, Validation, Security, driver PostgreSQL, Flyway, springdoc-openapi y Testcontainers.
-- [ ] `application.yml` con perfiles `dev` y `test`: `ddl-auto: validate`, `default_schema: cafetin`, URL JDBC con `stringtype=unspecified`; V2 (datos de prueba) solo en `dev`.
-- [ ] Paquetes por módulo y, dentro de cada uno, capas `controller` / `service` / `repository` / `dto`: `cuentas`, `catalogo`, `pedidos`, `despacho`, `inventario`, `reportes`, `comun`. Así se ven los cinco paquetes del análisis y la arquitectura en capas que hay que sustentar.
-- [ ] Entidades: `Usuario` abstracta (JOINED, discriminador `tipo_usuario`) con `Estudiante`, `Trabajador`, `Dueno`; `Notificacion` (JOINED) con `AlertaStock`; `Categoria`, `Proveedor`, `Producto`, `Inventario` (1:1), `Pedido`, `DetallePedido`, `Pago` (1:1), `Recibo` (1:1).
+- [x] Proyecto Spring Boot 4.1 (Java 21) con Web, Data JPA, Validation, Security, driver PostgreSQL, Flyway, springdoc-openapi y Testcontainers.
+- [x] `application.yml` con perfiles `dev`, `test` y `prod`: `ddl-auto: validate`, `default_schema: cafetin`, `stringtype=unspecified` y `currentSchema=cafetin` en cada conexión; V2 (datos de prueba) solo en `dev`. **PR 1.**
+- [x] Paquetes por módulo (con `package-info.java`; las capas se crean al implementar) y, dentro de cada uno, capas `controller` / `service` / `repository` / `dto`: `cuentas`, `catalogo`, `pedidos`, `despacho`, `inventario`, `reportes`, `comun`. Así se ven los cinco paquetes del análisis y la arquitectura en capas que hay que sustentar.
+- [ ] **PR 2.** Entidades: `Usuario` abstracta (JOINED, discriminador `tipo_usuario`) con `Estudiante`, `Trabajador`, `Dueno`; `Notificacion` (JOINED) con `AlertaStock`; `Categoria`, `Proveedor`, `Producto`, `Inventario` (1:1), `Pedido`, `DetallePedido`, `Pago` (1:1), `Recibo` (1:1).
 - [ ] Las 5 vistas como entidades de solo lectura (`@Immutable`), cada una con su `@Id` (`dia` en ingresos diarios, `id_producto` en más vendidos).
-- [ ] Manejo de errores único (`@RestControllerAdvice`) con formato `{codigo, mensaje, detalles}`; violación de integridad → 409.
+- [ ] **PR 3.** Manejo de errores único (`@RestControllerAdvice`) con formato `{codigo, mensaje, detalles}`; violación de integridad → 409.
 - [ ] Contrato: todos los controllers con sus DTOs y respuesta 501, exportado a `docs/openapi.yaml` (ver Contrato de la API).
-- [ ] Tests de humo con Testcontainers: el contexto arranca, Flyway aplica V1–V2, y un `UPDATE` de pago a `PAGADO` descuenta el stock.
+- [x] Tests de humo con Testcontainers: el contexto arranca, Flyway aplica V1 (y V2 en `DatosDevTest`), los triggers calculan el total, descuentan stock solo con `UPDATE` a `PAGADO`, rechazan stock negativo y alertan sin duplicados. **PR 1.**
 
 Prompt sugerido:
 
