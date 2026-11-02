@@ -23,8 +23,12 @@ Desde el 9 nov, API, app y panel avanzan en paralelo sobre el contrato; las prue
 | Producto agotado: ¿se oculta con `activo = FALSE`? | El catálogo muestra "AGOTADO" desde la vista y `activo` queda solo para la baja manual del dueño | Hoy `activo` significa dos cosas y, al recargar stock, no se sabe si reactivar el producto (ver Análisis, punto 7). |
 | Migraciones | Flyway: V1 esquema, V2 datos de prueba, V3 en adelante para cambios | Todos trabajan con la misma BD y Claude Code no toca el esquema sin un archivo revisable. |
 | Orden de trabajo | Tres pistas paralelas tras congelar el contrato | Ver arriba. |
+| Pago en efectivo | Opción A: quitar `EFECTIVO` de la app. Opción B: el pedido en efectivo entra a despacho con pago `PENDIENTE` y el trabajador lo pasa a `PAGADO` al entregar (no reserva stock) | El informe (CU-02) dice que en efectivo se paga al recoger, pero el stock solo baja con `PAGADO` y el despacho filtra pagados: hoy el trabajador nunca vería esos pedidos. |
+| Estado del pedido tras pagar | Queda `PENDIENTE` y el trabajador lo confirma (RF-11); corregir la postcondición de CU-02 en el informe, que dice "Confirmado" | Plan e informe se contradicen. Pagado/no pagado se distingue por `pago.estado`, no por `pedido.estado`. |
+| Cancelar un pedido pagado | Opción A: solo se cancela sin pagar. Opción B: cancelar pagado = pago `REEMBOLSADO` + reponer stock en el servicio | No hay trigger que devuelva stock; sin regla, cancelar un pedido pagado pierde unidades. |
+| Correcciones al esquema | Aplicarlas directo en `V1` al crearla (aún no se aplicó en ninguna BD): trigger de agotado, `fcm_token`, alertas solo al cruzar el mínimo | Evita migraciones de parche. Hay que reflejarlo en el informe (RN-03). |
 
-Pregunta abierta: el análisis menciona iOS en RNF-07, pero el stack solo contempla Android. Conviene dejar escrito que iOS queda fuera del alcance.
+iOS queda fuera del alcance (informe, §2.4 Limitaciones).
 
 ## Análisis del stack y del modelo físico
 
@@ -51,10 +55,15 @@ Lo que ya está bien resuelto:
 | 9 | No hay dónde guardar el token FCM | Sin token no hay push (RF-08). | Migración V3 con `usuario.fcm_token`. | 0, 5 |
 | 10 | `v_pedidos_en_curso` incluye pedidos sin pagar | El trabajador vería pedidos `PENDIENTE` que nunca se pagaron. | Filtrar `estado_pago = 'PAGADO'` en la consulta del despacho (o ajustar la vista). | 3 |
 | 11 | Transiciones de estado sin regla explícita | El esquema acepta cualquier cambio de `estado`; RF-11 a RF-14 suponen un orden. | Una clase de servicio decide las transiciones válidas; las demás devuelven 409. | 3 |
-| 12 | Códigos `PED-0427` y `codigo_verificacion` | Deben ser únicos y legibles. | `codigo_pedido` desde una secuencia; código de recibo aleatorio de 6–8 caracteres con reintento si choca con el `UNIQUE`. | 3 |
+| 12 | Códigos `PED-0427` y `codigo_verificacion` | Deben ser únicos y legibles. Con ≈750 pedidos/día, 4 dígitos se agotan en dos semanas. | `codigo_pedido` desde una secuencia sin relleno fijo (`PED-12345` cabe en `VARCHAR(12)`); código de recibo con el formato del informe `DR-<nº>-<4 dígitos aleatorios>` (Tabla 16), con reintento si choca con el `UNIQUE`. | 3 |
 | 13 | Pruebas con H2 no sirven | H2 no ejecuta triggers PL/pgSQL, enums de PostgreSQL ni estas vistas. | Testcontainers con PostgreSQL 16 desde la Fase 1 (requiere Docker en cada equipo y en CI). | 1 |
 | 14 | RF-03 con token en texto plano | `usuario.token_recupera` guarda el token tal cual. | Guardar un hash del token, expiración corta; en desarrollo el enlace se escribe en el log. | 2 |
 | 15 | RNF-04 "cifrar datos de pago" | Con pasarela simulada no hay datos de tarjeta que guardar. | No guardar datos de tarjeta, solo `referencia`; HTTPS en el despliegue; contraseñas con BCrypt (ya previsto). | 3, 7 |
+| 16 | Reintento de pago y `UNIQUE(id_pedido)` en `pago` | Si la pasarela rechaza, el informe permite reintentar o cambiar de método; un segundo `INSERT` viola el `UNIQUE`. | Reutilizar la fila existente (`FALLIDO`/`PENDIENTE` → actualizar método y estado). Test de rechazo y reintento. | 3 |
+| 17 | Alertas de stock repetidas | `trg_alerta_stock_minimo` inserta una alerta por dueño en cada venta mientras el stock siga bajo el mínimo. | Alertar solo al cruzar el mínimo (`OLD.cantidad_disponible > NEW.stock_minimo`) o al llegar a 0; al recargar, marcar atendidas las abiertas. | 0, 4 |
+| 18 | `pago.monto` y `pedido.total` no están ligados | Nada impide cobrar un monto distinto del total. | El servicio toma `monto` del total refrescado; test que lo comprueba. | 3 |
+| 19 | El seed no permite iniciar sesión ni ver ingresos | Las contraseñas no son hashes BCrypt válidos y los pagos de los pedidos 1 y 2 quedan `PENDIENTE` (sin descuento de stock, reportes vacíos, pedido 2 fuera del despacho). | En `V2`: hashes BCrypt reales con una contraseña de demo documentada, `UPDATE` de esos pagos a `PAGADO` y fechas en varios días para los reportes. | 0 |
+| 20 | Pedidos sin pagar que nunca expiran y `hora_recojo` sin validar | Se acumulan carritos abandonados en `PENDIENTE`; se puede pedir para una hora pasada. | Definir cancelación automática (o aceptarlo por escrito) y validar la hora en el servicio. | 3 |
 
 ## Repositorio y forma de trabajo con Claude Code
 
@@ -85,6 +94,49 @@ gestion-cafetin/
 6. Cuando el equipo decide algo o Claude repite un error, se anota en el `CLAUDE.md` correspondiente.
 7. Sesión nueva (o `/clear`) entre tareas que no tienen relación, para no arrastrar contexto.
 
+### Reparto del equipo por módulos
+
+Las fases no se pueden repartir una por persona porque dependen unas de otras: 0, 1 y 2 son la base común y la 7 necesita todo. Lo que sí se reparte son los **paquetes funcionales**: cada persona se queda con un módulo de punta a punta (API + pantallas). Funciona una vez cerrada la base común y respetando los puntos de acoplamiento.
+
+| Fase | Depende de | ¿Independiente? |
+| --- | --- | --- |
+| 0 Repo y entorno | — | No: base de todos. Se reparte por tareas (compose/CI, V1/V2, CLAUDE.md). |
+| 1 Entidades y contrato | 0 | Parcial: las 14 entidades son compartidas y las crea una persona; cada dueño de módulo escribe en `openapi.yaml` los DTOs y endpoints de su paquete. |
+| 2 Cuentas (P1) | 1 | Bloquea solo el login. Los demás avanzan con `@WithMockUser` en los tests y un token de prueba. |
+| 3 Pedidos y despacho (P2, P3) | 1, 2 | Sí, con el catálogo e inventario del seed. |
+| 4 Inventario e ingresos (P4, P5) | 1, 2 | Sí, con los pagos del seed (una vez corregido). |
+| 5 Notificaciones | 3 | Sí, si la Fase 1 fija el evento `PedidoEstadoCambiado`: la Fase 3 lo publica y la Fase 5 lo escucha. |
+| 6 Pruebas | todas | Transversal: cada módulo entrega sus tests; la matriz y la carga se consolidan al final. |
+| 7 Despliegue | todas | No; se adelantan el Dockerfile y un despliegue temprano. |
+
+| Responsable | Módulo | API | Cliente | RF |
+| --- | --- | --- | --- | --- |
+| José Daniel Lizca | Cuentas, notificaciones e infraestructura | Fase 2 (JWT, roles, `SecurityConfig`), Fase 5 (FCM), CI y Fase 7 | Login y registro en app y panel; shell del panel con menú por rol | RF-01–03, RF-08 (envío) |
+| Eliú Barrera | Pedidos, pagos y despacho (núcleo) | Fase 3 completa, incluida la clase de transiciones de estado | App Android: catálogo, carrito, pago, recibo, historial | RF-04–07, RF-09–14 |
+| Maria Elizabeth Ruiz | Inventario e ingresos | Fase 4 completa | Panel web: tablero de despacho y pantallas del dueño | RF-15–22 |
+
+Así cada responsable puede explicar un flujo completo en la sustentación, la máquina de estados tiene un solo dueño y la app (Eliú) y el panel (Maria) no se pisan.
+
+**Puntos de acoplamiento (se acuerdan en la Fase 1):**
+
+1. `docs/openapi.yaml` congelado: los clientes trabajan contra el contrato aunque el endpoint devuelva 501.
+2. Entidades compartidas: cualquier cambio después de la Fase 1 va en un PR que revisa el dueño del módulo afectado.
+3. `SecurityConfig` y `application.yml` son de Lizca; los demás piden sus reglas por PR.
+4. Migraciones con números reservados: Lizca `V3`–`V9`, Eliú `V10`–`V19`, Maria `V20`–`V29`. Dos `V3` en ramas distintas rompen Flyway.
+5. Evento `PedidoEstadoCambiado` en `comun`: lo publica Eliú y lo consume Lizca.
+6. Formato de error `{codigo, mensaje, detalles}` y `@RestControllerAdvice` en `comun`: se crean en la Fase 1 y no los cambia cada módulo.
+7. El seed (`V2`) es la fuente de datos común: corregirlo primero (punto 19 del Análisis).
+
+**Tareas por responsable** (en orden de dependencia, sin fechas):
+
+| Etapa | José Daniel Lizca | Eliú Barrera | Maria Elizabeth Ruiz |
+| --- | --- | --- | --- |
+| Base común (Fases 0–1) | `docker-compose.yml`, CI, V1 y V2 corregidas | Entidades JPA + test de humo | Contrato OpenAPI + `comun` (errores, evento) |
+| Módulo propio | Seguridad JWT + login en app y panel | Catálogo + crear pedido (tests primero) | Productos e inventario (RF-15, RF-19) |
+| Módulo propio | FCM + despliegue temprano | Pagar, máquina de estados, despacho (API) + app | Alertas, recarga, reportes + panel (despacho y dueño) |
+| Pruebas | Carga con k6, trazabilidad | Pruebas del núcleo y de UI de la app | Pruebas del panel, aceptación por rol |
+| Cierre | Producción, APK firmado | Ensayo de la demo | Manuales |
+
 ### Plantilla de prompt
 
 ```
@@ -102,7 +154,8 @@ Al terminar, cualquiera del equipo clona el repo, levanta PostgreSQL con un coma
 - [ ] Crear el repo en GitHub con la estructura de arriba, `.gitignore` para Java, Node y Android, y `main` protegida (solo por PR).
 - [ ] Copiar el `CLAUDE.md` raíz y crear uno corto en `api/`, `panel-web/` y `app-android/`.
 - [ ] `docker-compose.yml` con PostgreSQL 16, volumen nombrado y credenciales desde `.env`.
-- [ ] Convertir `01_gestion_cafetin_schema.sql` en `V1__esquema.sql` sin `DROP SCHEMA`, `CREATE SCHEMA` ni `SET search_path` (Flyway crea el esquema; si el script lo borra, borra también el historial de migraciones). `02_gestion_cafetin_datos.sql` pasa a `V2__datos_prueba.sql`.
+- [ ] Convertir `01_gestion_cafetin_schema.sql` en `V1__esquema.sql` sin `DROP SCHEMA`, `CREATE SCHEMA` ni `SET search_path` (Flyway crea el esquema; si el script lo borra, borra también el historial de migraciones). `02_gestion_cafetin_datos.sql` pasa a `V2__datos_prueba.sql` con las correcciones del punto 19 del Análisis. Las correcciones de esquema decididas (puntos 7, 9 y 17) van directo en `V1`.
+- [ ] Mover `Documentación/` a `docs/` para que coincida con `CLAUDE.md`.
 - [ ] Cerrar las decisiones del Resumen y escribirlas en `CLAUDE.md`.
 - [ ] Workflow de GitHub Actions que ejecuta `./mvnw verify` en `api/` en cada PR.
 
@@ -197,6 +250,10 @@ Es el núcleo del sistema: al terminar, un estudiante pide y paga desde la app y
 - [ ] Dos pagos concurrentes por la última unidad → uno pasa, el otro recibe 409 (RNF-03).
 - [ ] Transición inválida (`LISTO` → `CONFIRMADO`) → 409.
 - [ ] Entregar sin recibo verificado → 409.
+- [ ] Pago rechazado y reintento con otro método → un solo registro en `pago`, termina `PAGADO`.
+- [ ] `pago.monto` igual a `pedido.total`.
+- [ ] Cancelación según lo decidido (sin pagar, o pagado con reembolso y stock repuesto).
+- [ ] Estudiante que consulta un pedido ajeno → 403 o 404.
 
 **App Android:** catálogo con estado de stock, carrito, hora de recojo, pago (método), pantalla de recibo con el código grande, historial.
 
@@ -270,7 +327,7 @@ Las pruebas no esperan al final: cada fase entrega sus tests y esta fase consoli
 
 - [ ] Matriz de trazabilidad en `docs/`: RF-01…RF-22 y RNF-01…RNF-08 → casos de prueba → resultado.
 - [ ] Umbral de cobertura en servicios acordado por el equipo (JaCoCo) y verificado en CI.
-- [ ] Prueba de carga del flujo crear + pagar, con la cantidad de pedidos de hora punta que estime el equipo a partir de la encuesta.
+- [ ] Prueba de carga del flujo crear + pagar, con el objetivo del informe: ≈100 pedidos por hora en hora punta (4 trabajadores), cada confirmación por debajo de 5 s.
 - [ ] Pruebas exploratorias en un teléfono real y registro de defectos como issues de GitHub.
 
 Prompt sugerido:
