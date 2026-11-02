@@ -16,7 +16,8 @@ Desde el 9 nov, API, app y panel avanzan en paralelo sobre el contrato; las prue
 
 | Decisión | Recomendación | Por qué |
 | --- | --- | --- |
-| Panel web: React 18 o Thymeleaf | React + TypeScript con Vite | El argumento del stack es "una API REST para dos clientes"; Thymeleaf renderiza en el servidor, no consume la API y obliga a una segunda configuración de seguridad (sesión además de JWT). Además hay experiencia previa en el equipo con React y TypeScript. |
+| Infraestructura (**cerrada 02/11**) | Neon (base de datos, una rama por persona), Render (API en Docker), Vercel (panel) | Neon es PostgreSQL real (triggers, enums, vistas) con ramas para trabajar sin pisarse; Vercel no ejecuta Java, por eso la API va en Render. |
+| Panel web: React 18 o Thymeleaf (**cerrada 02/11: React**) | React + TypeScript con Vite, en Vercel | El argumento del stack es "una API REST para dos clientes"; Thymeleaf renderiza en el servidor, no consume la API y obliga a una segunda configuración de seguridad (sesión además de JWT). Además hay experiencia previa en el equipo con React y TypeScript. |
 | Pago (RF-06): pasarela real o simulada | Simulada, detrás de una interfaz `PasarelaPago` | Una pasarela real exige cuenta comercial y no aporta a lo que evalúa el curso; la interfaz permite cambiarla después sin tocar el resto. |
 | Token de notificaciones (RF-08) | Columna `fcm_token` en `usuario`, en una migración V3 | El modelo físico no tiene dónde guardar el token del dispositivo, y sin él no se puede enviar un push. |
 | "Tiempo real" (RF-04, RF-10) | Polling cada 5 s en el panel; push FCM al estudiante | Cumple el requisito con poco riesgo; SSE queda como mejora si sobra tiempo. |
@@ -72,8 +73,8 @@ Un monorepo con las tres piezas y un `CLAUDE.md` en la raíz permite que Claude 
 ```
 gestion-cafetin/
 ├── CLAUDE.md                  contexto común para Claude Code
-├── docker-compose.yml         PostgreSQL 16 para desarrollo
-├── .env.example               variables (sin secretos reales)
+├── .env.example               variables: conexión a Neon, JWT, CORS (sin secretos reales)
+├── .github/workflows/api.yml  CI: ./mvnw verify en cada PR
 ├── docs/                      análisis, diagramas, openapi.yaml, matriz de trazabilidad
 ├── api/                       Spring Boot 3 · Java 17+ · Maven
 │   ├── CLAUDE.md              reglas del backend
@@ -94,13 +95,59 @@ gestion-cafetin/
 6. Cuando el equipo decide algo o Claude repite un error, se anota en el `CLAUDE.md` correspondiente.
 7. Sesión nueva (o `/clear`) entre tareas que no tienen relación, para no arrastrar contexto.
 
+### Ramas y protección de `main`
+
+`main` está protegida: nadie (ni el dueño del repo) sube cambios directo a ella. Todo entra por un pull request revisado por otra persona del equipo.
+
+**Configurar la protección (una vez, lo hace el dueño del repo):**
+
+1. En GitHub, abrir el repo → **Settings** → **Rules** → **Rulesets** → **New ruleset** → **New branch ruleset**.
+2. **Ruleset name:** `proteger-main`. **Enforcement status:** `Active`.
+3. **Target branches** → **Add target** → **Include default branch** (es `main`).
+4. **Bypass list:** dejarla vacía, para que la regla aplique a todos.
+5. Marcar estas reglas:
+   - **Restrict deletions** — nadie puede borrar `main`.
+   - **Block force pushes** — nadie puede reescribir su historial.
+   - **Require a pull request before merging**, con **Required approvals: 1** y **Dismiss stale pull request approvals when new commits are pushed**.
+   - **Require status checks to pass** → agregar el check `verify` del workflow `API` (aparece en la lista después de que corra una vez en un PR).
+6. **Create**.
+7. Agregar a los compañeros: **Settings** → **Collaborators** → **Add people** (con permiso *Write*).
+
+Para comprobarlo: un `git push origin main` directo debe ser rechazado con un mensaje de que la rama está protegida.
+
+**Flujo de trabajo para cada tarea:**
+
+```
+git switch main
+git pull                                   # partir siempre del main actualizado
+git switch -c feat/p2-crear-pedido         # una rama por tarea
+# ... cambios, tests en verde ...
+git add <archivos>
+git commit -m "RF-05: crear pedido con detalle"
+git push -u origin feat/p2-crear-pedido    # GitHub muestra el enlace para abrir el PR
+```
+
+Después, en GitHub: abrir el PR hacia `main`, pedir revisión a un compañero, corregir lo que pida y, con la aprobación y el CI en verde, **Squash and merge** y borrar la rama.
+
+**Nombres de rama:** `<tipo>/<paquete>-<tarea-corta>`.
+
+| Tipo | Uso | Ejemplo |
+| --- | --- | --- |
+| `feat/` | Funcionalidad nueva | `feat/p4-recarga-stock` |
+| `fix/` | Corrección de un error | `fix/p3-transicion-listo` |
+| `docs/` | Solo documentación | `docs/manual-dueno` |
+| `test/` | Solo pruebas | `test/p2-pago-concurrente` |
+| `chore/` | Configuración, CI, dependencias | `chore/ci-jacoco` |
+
+Si `main` avanzó mientras trabajabas: `git switch main && git pull && git switch <tu-rama> && git merge main`, resolver conflictos, correr los tests y volver a hacer push.
+
 ### Reparto del equipo por módulos
 
 Las fases no se pueden repartir una por persona porque dependen unas de otras: 0, 1 y 2 son la base común y la 7 necesita todo. Lo que sí se reparte son los **paquetes funcionales**: cada persona se queda con un módulo de punta a punta (API + pantallas). Funciona una vez cerrada la base común y respetando los puntos de acoplamiento.
 
 | Fase | Depende de | ¿Independiente? |
 | --- | --- | --- |
-| 0 Repo y entorno | — | No: base de todos. Se reparte por tareas (compose/CI, V1/V2, CLAUDE.md). |
+| 0 Repo y entorno | — | No: base de todos. Se reparte por tareas (Neon/CI, V1/V2, CLAUDE.md). |
 | 1 Entidades y contrato | 0 | Parcial: las 14 entidades son compartidas y las crea una persona; cada dueño de módulo escribe en `openapi.yaml` los DTOs y endpoints de su paquete. |
 | 2 Cuentas (P1) | 1 | Bloquea solo el login. Los demás avanzan con `@WithMockUser` en los tests y un token de prueba. |
 | 3 Pedidos y despacho (P2, P3) | 1, 2 | Sí, con el catálogo e inventario del seed. |
@@ -131,9 +178,9 @@ Así cada responsable puede explicar un flujo completo en la sustentación, la m
 
 | Etapa | José Daniel Lizca | Eliú Barrera | Maria Elizabeth Ruiz |
 | --- | --- | --- | --- |
-| Base común (Fases 0–1) | `docker-compose.yml`, CI, V1 y V2 corregidas | Entidades JPA + test de humo | Contrato OpenAPI + `comun` (errores, evento) |
+| Base común (Fases 0–1) | Proyecto Neon y ramas, CI, V1 y V2 corregidas | Entidades JPA + test de humo | Contrato OpenAPI + `comun` (errores, evento) |
 | Módulo propio | Seguridad JWT + login en app y panel | Catálogo + crear pedido (tests primero) | Productos e inventario (RF-15, RF-19) |
-| Módulo propio | FCM + despliegue temprano | Pagar, máquina de estados, despacho (API) + app | Alertas, recarga, reportes + panel (despacho y dueño) |
+| Módulo propio | FCM + despliegue temprano (Render + Vercel) | Pagar, máquina de estados, despacho (API) + app | Alertas, recarga, reportes + panel (despacho y dueño) |
 | Pruebas | Carga con k6, trazabilidad | Pruebas del núcleo y de UI de la app | Pruebas del panel, aceptación por rol |
 | Cierre | Producción, APK firmado | Ensayo de la demo | Manuales |
 
@@ -149,25 +196,32 @@ Hecho cuando: ./mvnw verify pasa e incluye un test con Testcontainers que crea u
 
 ## Fase 0 — Repositorio y entorno · 19/10 – 23/10
 
-Al terminar, cualquiera del equipo clona el repo, levanta PostgreSQL con un comando y abre Claude Code con el contexto ya cargado.
+Al terminar, cualquiera del equipo clona el repo, se conecta a su propia rama de Neon y abre Claude Code con el contexto ya cargado.
 
-- [ ] Crear el repo en GitHub con la estructura de arriba, `.gitignore` para Java, Node y Android, y `main` protegida (solo por PR).
-- [ ] Copiar el `CLAUDE.md` raíz y crear uno corto en `api/`, `panel-web/` y `app-android/`.
-- [ ] `docker-compose.yml` con PostgreSQL 16, volumen nombrado y credenciales desde `.env`.
-- [ ] Convertir `01_gestion_cafetin_schema.sql` en `V1__esquema.sql` sin `DROP SCHEMA`, `CREATE SCHEMA` ni `SET search_path` (Flyway crea el esquema; si el script lo borra, borra también el historial de migraciones). `02_gestion_cafetin_datos.sql` pasa a `V2__datos_prueba.sql` con las correcciones del punto 19 del Análisis. Las correcciones de esquema decididas (puntos 7, 9 y 17) van directo en `V1`.
-- [ ] Mover `Documentación/` a `docs/` para que coincida con `CLAUDE.md`.
-- [ ] Cerrar las decisiones del Resumen y escribirlas en `CLAUDE.md`.
-- [ ] Workflow de GitHub Actions que ejecuta `./mvnw verify` en `api/` en cada PR.
+- [x] Crear el repo en GitHub con la estructura de arriba y `.gitignore` para Java, Node y Android.
+- [ ] Proteger `main` y agregar a los compañeros como colaboradores (ver "Ramas y protección de `main`").
+- [x] Copiar el `CLAUDE.md` raíz y crear uno corto en `api/`, `panel-web/` y `app-android/`.
+- [x] `.env.example` con la conexión a Neon, el secreto JWT y los orígenes CORS (sin valores reales).
+- [ ] Crear el proyecto en Neon, una rama por persona e invitar al equipo (ver "Configurar Neon").
+- [x] Convertir `01_gestion_cafetin_schema.sql` en `V1__esquema.sql` sin `DROP SCHEMA`, `CREATE SCHEMA` ni `SET search_path` (Flyway crea el esquema; si el script lo borra, borra también el historial de migraciones). `02_gestion_cafetin_datos.sql` pasa a `V2__datos_prueba.sql` con las correcciones del punto 19 del Análisis. Las correcciones de esquema decididas (puntos 7, 9 y 17) van directo en `V1`.
+- [x] Mover `Documentación/` a `docs/` para que coincida con `CLAUDE.md`.
+- [ ] Cerrar las decisiones del Resumen y escribirlas en `CLAUDE.md`. Cerradas el 02/11: `fcm_token`, producto agotado, alertas, infraestructura (Neon, Render, Vercel) y panel en React. Faltan: pasarela, tiempo real, efectivo y cancelación.
+- [x] Workflow de GitHub Actions que ejecuta `./mvnw verify` en `api/` en cada PR (se omite mientras no exista `api/pom.xml`).
+- [ ] Docker instalado en cada equipo: lo necesitan los tests (Testcontainers), aunque la base de desarrollo esté en Neon.
 
-Prompt sugerido:
+### Configurar Neon (una vez, lo hace Lizca)
 
-```
-Lee CLAUDE.md. Crea docker-compose.yml con PostgreSQL 16 (base cafetin, usuario y clave desde .env) y .env.example.
-Agrega un workflow de GitHub Actions que corra ./mvnw verify dentro de api/ en cada pull request.
-No crees todavía el proyecto Spring. Muéstrame los archivos antes de escribirlos.
-```
+1. Crear una cuenta en [neon.tech](https://neon.tech) e iniciar sesión con GitHub.
+2. **New project**: nombre `cafetin`, **Postgres 16**, región **AWS US East 2 (Ohio)**. Render despliega la API en Ohio y conviene que estén en la misma región para que las consultas sean rápidas.
+3. La rama `main` de Neon es **producción**: nadie desarrolla contra ella.
+4. **Branches** → **New branch** desde `main`: crear `dev-lizca`, `dev-eliu` y `dev-maria`.
+5. **Settings** → **Collaborators** (o la organización del proyecto): invitar a Eliú y a Maria.
+6. Cada uno, en su rama: **Connect** → desmarcar **Connection pooling** → copiar host, usuario y contraseña a su `.env` (formato en `.env.example`). La conexión debe ser la **directa** (host sin `-pooler`).
+7. Al arrancar la API en el perfil `dev`, Flyway crea el esquema `cafetin`, aplica V1 y V2 y fija la zona horaria `America/Lima`.
 
-Hecho cuando: `docker compose up -d` levanta la base y `psql` conecta con las credenciales de `.env`.
+Para volver a empezar con datos limpios: en Neon, **Branches** → tu rama → **Reset from parent**, y arrancar la API otra vez.
+
+Hecho cuando: cada integrante tiene su rama en Neon y su `.env` local, y conecta con `psql "<cadena de conexión>"` (o desde el editor SQL de Neon).
 
 ## Fase 1 — Esqueleto de la API, entidades y contrato · 26/10 – 06/11
 
@@ -342,11 +396,12 @@ Hecho cuando: cada RF tiene al menos un caso con resultado registrado y los RNF 
 
 ## Fase 7 — Despliegue y cierre · 07/12 – 18/12
 
-Se publica una versión estable para la demo: API y base de datos en un servidor con HTTPS, el panel como sitio estático y la app como APK firmado.
+Se publica una versión estable para la demo: base de datos en Neon (rama `main`), API en Render, panel en Vercel y app como APK firmado. Los tres dan HTTPS (RNF-04).
 
-- [ ] `Dockerfile` multietapa para la API; base de datos, secreto JWT y credencial de Firebase por variables de entorno.
-- [ ] Hosting: un PaaS con PostgreSQL gestionado, o un servidor (de la universidad o un VPS) con Docker Compose. Revisar las condiciones del plan gratuito al momento de desplegar. HTTPS obligatorio (RNF-04).
-- [ ] Panel: `npm run build` y hosting estático; URL de la API por variable de entorno.
+- [ ] `Dockerfile` multietapa para la API; `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `CORS_ORIGINS` y la credencial de Firebase por variables de entorno.
+- [ ] **Render**: *New* → *Web Service* desde el repo de GitHub, *Root Directory* `api`, entorno *Docker*, región **Ohio**, perfil `prod`, variables de entorno con la conexión **directa** a la rama `main` de Neon, *Health Check Path* `/actuator/health`. Revisar las condiciones del plan gratuito al desplegar: si el servicio se duerme sin tráfico, el primer arranque de la JVM tarda.
+- [ ] **Vercel**: *Add New* → *Project* desde el repo, *Root Directory* `panel-web`, framework Vite, variable `VITE_API_URL` con la URL de Render, `vercel.json` con rewrite a `/index.html`. Agregar el dominio de Vercel a `CORS_ORIGINS` en Render.
+- [ ] **Neon**: la API en `prod` aplica solo las migraciones del esquema (sin V2) sobre la rama `main`.
 - [ ] App: APK de release firmado con la URL de producción, distribuido directamente (sin Play Store).
 - [ ] RNF-06: health check con Spring Boot Actuator y reinicio automático del contenedor. El 99 % de disponibilidad no se puede demostrar en dos semanas; se documenta cómo se mediría.
 - [ ] Datos de demo: dueño, dos trabajadores, varios estudiantes y un catálogo realista; V2 no se aplica en producción salvo para la demo.
@@ -402,6 +457,8 @@ El riesgo mayor es el calendario: cuatro semanas para tres clientes. Lo que más
 | Firebase se retrasa | Sin token registrado al 30/11 | Notificaciones también en tabla y consultadas por la app al abrirse |
 | Secretos en el repositorio | Claves en un diff | `.env` fuera de Git, `.env.example` sin valores reales, revisar los diffs antes de cada commit |
 | Despliegue de última hora | Nada desplegado al 04/12 | Desplegar una versión temprana al cerrar la Fase 3 |
+| Arranque en frío en la demo | La primera petición tarda varios segundos (Render dormido o Neon suspendido) | Abrir la app y el panel unos minutos antes de la demo para despertar la API y la base; si no alcanza, un plan pago de Render solo para el mes de la demo |
+| Límites del plan gratuito | Neon o Render avisan de cuota agotada | Revisar el uso cada semana en sus paneles; los tests usan Testcontainers, no Neon, para no gastar cuota |
 
 ## Referencias
 
