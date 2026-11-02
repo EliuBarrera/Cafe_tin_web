@@ -1,0 +1,3105 @@
+openapi: 3.1.0
+info:
+  description: |-
+    API única para la app Android (estudiante) y el panel web (trabajador y dueño).
+    Autenticación: `Authorization: Bearer <JWT>` obtenido en `POST /api/auth/login`.
+    Errores: siempre `{codigo, mensaje, detalles}`; los clientes deciden por `codigo`.
+    Precios y montos en soles (S/) con 2 decimales. Fechas y horas en hora de Lima.
+  title: Gestión Cafetín — API REST
+  version: 1.0.0
+servers:
+- description: Mismo origen de la API
+  url: /
+security:
+- bearerAuth: []
+tags:
+- description: "Registro, inicio de sesión, recuperación de contraseña y perfil"
+  name: Cuentas
+- description: "Catálogo, carrito, pago, recibo e historial del estudiante"
+  name: Pedidos
+- description: "Ventas, ingresos por periodo y productos más vendidos (solo DUENO)"
+  name: Ingresos
+- description: Pedidos pagados y su ciclo hasta la entrega (TRABAJADOR y DUENO)
+  name: Despacho
+- description: "Productos, stock, alertas, categorías y proveedores (solo DUENO)"
+  name: Inventario
+paths:
+  /api/alertas:
+    get:
+      description: |-
+        DUENO · RF-17. Más recientes primero, con el teléfono del proveedor.
+        El panel consulta cada 5 s para el contador de alertas.
+      operationId: listar_6
+      parameters:
+      - description: false = solo pendientes (por defecto); true = solo atendidas
+        in: query
+        name: atendida
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlertaResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Listar alertas de stock
+      tags:
+      - Inventario
+  /api/alertas/{id}/atendida:
+    patch:
+      description: DUENO · RF-17
+      operationId: marcarAtendida
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertaResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Marcar alerta como atendida
+      tags:
+      - Inventario
+  /api/auth/login:
+    post:
+      description: "Público · RF-01, RF-02. Sirve para los tres roles."
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Correo o contraseña incorrectos (NO_AUTENTICADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      security: []
+      summary: Iniciar sesión
+      tags:
+      - Cuentas
+  /api/auth/recuperar:
+    post:
+      description: |-
+        Público · RF-03. Responde 202 exista o no el correo (no revela qué cuentas existen).
+        En el perfil dev el enlace se escribe en el log.
+      operationId: recuperar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecuperarRequest"
+        required: true
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      security: []
+      summary: Pedir enlace de recuperación
+      tags:
+      - Cuentas
+  /api/auth/registro:
+    post:
+      description: Público · RF-01. Devuelve el token para entrar directamente.
+      operationId: registrar_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistroEstudianteRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Correo o código de estudiante ya registrado (CONFLICTO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      security: []
+      summary: Registrar estudiante
+      tags:
+      - Cuentas
+  /api/auth/restablecer:
+    post:
+      description: Público · RF-03. El token es de un solo uso y expira.
+      operationId: restablecer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestablecerRequest"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Token inválido o expirado (REGLA_NEGOCIO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      security: []
+      summary: Restablecer contraseña
+      tags:
+      - Cuentas
+  /api/catalogo:
+    get:
+      description: |-
+        Autenticado (cualquier rol) · RF-04. Productos activos con su stock; incluye los AGOTADO
+        para que la app los muestre deshabilitados. "Tiempo real": la app vuelve a consultar al abrir
+        la pantalla y antes de pagar.
+      operationId: listar_5
+      parameters:
+      - description: Id de categoría para filtrar
+        in: query
+        name: categoria
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductoCatalogoResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Ver catálogo
+      tags:
+      - Pedidos
+  /api/categorias:
+    get:
+      description: Autenticado (cualquier rol) · RF-04. Para los filtros del catálogo.
+      operationId: listar_3
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoriaResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Listar categorías activas
+      tags:
+      - Inventario
+    post:
+      description: DUENO · RF-15. 409 CONFLICTO si el nombre ya existe.
+      operationId: crear_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoriaRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoriaResponse"
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Crear categoría
+      tags:
+      - Inventario
+  /api/categorias/{id}:
+    put:
+      description: DUENO · RF-15
+      operationId: actualizar_2
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoriaRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoriaResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Editar categoría
+      tags:
+      - Inventario
+  /api/categorias/{id}/estado:
+    patch:
+      description: DUENO · RF-15
+      operationId: cambiarEstado_3
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EstadoRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoriaResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Activar o desactivar categoría
+      tags:
+      - Inventario
+  /api/despacho/pedidos:
+    get:
+      description: |-
+        TRABAJADOR, DUENO · RF-10. Solo pedidos PAGADOS en PENDIENTE, CONFIRMADO, EN_PREPARACION o LISTO,
+        ordenados por hora de recojo. El panel consulta cada 5 s.
+      operationId: listar_4
+      parameters:
+      - description: Filtrar por un estado; vacío = todos los en curso
+        in: query
+        name: estado
+        required: false
+        schema:
+          type: string
+          enum:
+          - PENDIENTE
+          - CONFIRMADO
+          - EN_PREPARACION
+          - LISTO
+          - ENTREGADO
+          - CANCELADO
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PedidoDespachoResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Pedidos en curso
+      tags:
+      - Despacho
+  /api/despacho/pedidos/{id}/confirmar:
+    post:
+      description: "TRABAJADOR, DUENO · RF-11. PENDIENTE → CONFIRMADO y asigna al\
+        \ usuario autenticado. Notifica al estudiante."
+      operationId: confirmar
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Transición no permitida (TRANSICION_INVALIDA)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Confirmar pedido
+      tags:
+      - Despacho
+  /api/despacho/pedidos/{id}/entregar:
+    post:
+      description: "TRABAJADOR, DUENO · RF-14. LISTO → ENTREGADO; exige el recibo\
+        \ verificado. Notifica al estudiante."
+      operationId: entregar
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Recibo sin verificar (REGLA_NEGOCIO) o transición no permitida
+            (TRANSICION_INVALIDA)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Entregar pedido
+      tags:
+      - Despacho
+  /api/despacho/pedidos/{id}/listo:
+    post:
+      description: "TRABAJADOR, DUENO · RF-12. EN_PREPARACION → LISTO. Notifica al\
+        \ estudiante (M4)."
+      operationId: listo
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Transición no permitida (TRANSICION_INVALIDA)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Marcar listo para recoger
+      tags:
+      - Despacho
+  /api/despacho/pedidos/{id}/preparar:
+    post:
+      description: "TRABAJADOR, DUENO · RF-11. CONFIRMADO → EN_PREPARACION."
+      operationId: preparar
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Transición no permitida (TRANSICION_INVALIDA)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Empezar a preparar
+      tags:
+      - Despacho
+  /api/despacho/pedidos/{id}/verificar:
+    post:
+      description: "TRABAJADOR, DUENO · RF-13. Compara el código que muestra el estudiante\
+        \ con el del recibo; el pedido debe estar LISTO."
+      operationId: verificar
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerificarReciboRequest"
+        required: true
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El código no coincide o el pedido no está LISTO (REGLA_NEGOCIO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Verificar recibo
+      tags:
+      - Despacho
+  /api/inventario/{idProducto}/recarga:
+    patch:
+      description: DUENO · RF-18. Suma unidades y actualiza la fecha; marca como atendidas
+        las alertas abiertas del producto.
+      operationId: recargar
+      parameters:
+      - in: path
+        name: idProducto
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecargaRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventarioResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Recargar stock
+      tags:
+      - Inventario
+  /api/pedidos:
+    post:
+      description: |-
+        ESTUDIANTE · RF-05. Copia el precio actual de cada producto, valida que haya stock y deja el
+        pedido PENDIENTE sin pagar. El total lo calcula la base. No reserva stock: se descuenta al pagar.
+      operationId: crear_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearPedidoRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoResponse"
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Producto inactivo o sin stock suficiente (STOCK_INSUFICIENTE)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Crear pedido
+      tags:
+      - Pedidos
+  /api/pedidos/mios:
+    get:
+      description: ESTUDIANTE · RF-09. Más recientes primero.
+      operationId: historial
+      parameters:
+      - in: query
+        name: pagina
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - in: query
+        name: tamano
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginaPedidoResumenResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Mi historial de pedidos
+      tags:
+      - Pedidos
+  /api/pedidos/{id}:
+    get:
+      description: |-
+        ESTUDIANTE (propio) · RF-07, RF-08. Estado, detalle, pago y recibo. La app lo consulta para
+        refrescar el estado si el push no llegó.
+      operationId: obtener_1
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Ver mi pedido
+      tags:
+      - Pedidos
+  /api/pedidos/{id}/cancelar:
+    post:
+      description: |-
+        ESTUDIANTE · RF-05. Solo pedidos PENDIENTE sin pagar (decisión del 02/11/2026); un pedido pagado
+        no se cancela desde la app.
+      operationId: cancelar
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El pedido ya está pagado o no está PENDIENTE (TRANSICION_INVALIDA)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Cancelar pedido
+      tags:
+      - Pedidos
+  /api/pedidos/{id}/pago:
+    post:
+      description: |-
+        ESTUDIANTE · RF-06, RF-07, RF-16, RF-20. Cobra con la pasarela simulada, pasa el pago a PAGADO
+        (la base descuenta el stock) y genera el recibo. Si la pasarela rechaza, el pedido se conserva y
+        se puede reintentar con el mismo u otro método. Debe responder en menos de 5 s (RNF-02).
+      operationId: pagar
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagarRequest"
+        required: true
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "402":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: La pasarela rechazó el cobro (PAGO_RECHAZADO); se puede reintentar
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: |-
+            Otro estudiante compró las últimas unidades (STOCK_INSUFICIENTE) o el pedido ya está pagado o
+            cancelado (REGLA_NEGOCIO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Pagar pedido
+      tags:
+      - Pedidos
+  /api/productos:
+    get:
+      description: "DUENO · RF-15, RF-19. Incluye los deshabilitados."
+      operationId: listar_2
+      parameters:
+      - description: true = solo activos; false = solo deshabilitados; vacío = todos
+        in: query
+        name: activo
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductoResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Listar productos con su stock
+      tags:
+      - Inventario
+    post:
+      description: DUENO · RF-15. Producto e inventario en la misma transacción.
+      operationId: registrar_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductoRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductoResponse"
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Ya existe un producto con ese nombre (CONFLICTO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Registrar producto con stock inicial
+      tags:
+      - Inventario
+  /api/productos/{id}:
+    get:
+      description: DUENO · RF-19
+      operationId: obtener
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductoResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Ver producto
+      tags:
+      - Inventario
+    put:
+      description: DUENO · RF-19. Cambiar el precio no afecta pedidos anteriores (precio
+        histórico).
+      operationId: actualizar_1
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductoActualizarRequest"
+        required: true
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Ya existe un producto con ese nombre (CONFLICTO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Editar producto
+      tags:
+      - Inventario
+  /api/productos/{id}/estado:
+    patch:
+      description: "DUENO · RF-19. Deshabilitado = oculto del catálogo, sin borrarlo."
+      operationId: cambiarEstado_2
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EstadoRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductoResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Habilitar o deshabilitar producto
+      tags:
+      - Inventario
+  /api/proveedores:
+    get:
+      description: DUENO · RF-15
+      operationId: listar_1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProveedorResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Listar proveedores
+      tags:
+      - Inventario
+    post:
+      description: DUENO · RF-15. 409 CONFLICTO si el nombre ya existe.
+      operationId: crear
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProveedorRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProveedorResponse"
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Registrar proveedor
+      tags:
+      - Inventario
+  /api/proveedores/{id}:
+    put:
+      description: DUENO · RF-15
+      operationId: actualizar
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProveedorRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProveedorResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Editar proveedor
+      tags:
+      - Inventario
+  /api/proveedores/{id}/estado:
+    patch:
+      description: DUENO · RF-15
+      operationId: cambiarEstado_1
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EstadoRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProveedorResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Activar o desactivar proveedor
+      tags:
+      - Inventario
+  /api/reportes/ingresos:
+    get:
+      description: |-
+        DUENO · RF-21. Solo pagos PAGADO, en hora de Lima. Sin fechas: últimos 30 días.
+        Periodos sin ventas no aparecen.
+      operationId: ingresos
+      parameters:
+      - in: query
+        name: periodo
+        required: false
+        schema:
+          type: string
+          default: DIA
+          enum:
+          - DIA
+          - SEMANA
+          - MES
+      - description: "Desde (incluido), yyyy-MM-dd"
+        in: query
+        name: desde
+        required: false
+        schema:
+          type: string
+          format: date
+      - description: "Hasta (incluido), yyyy-MM-dd"
+        in: query
+        name: hasta
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IngresoPeriodoResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: "Ingresos por día, semana o mes"
+      tags:
+      - Ingresos
+  /api/reportes/mas-vendidos:
+    get:
+      description: "DUENO · RF-22. Ordenados por unidades vendidas, de todo el histó\
+        rico."
+      operationId: masVendidos
+      parameters:
+      - in: query
+        name: limite
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductoVendidoResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Productos más vendidos
+      tags:
+      - Ingresos
+  /api/reportes/ventas:
+    get:
+      description: "DUENO · RF-20. Cada pago PAGADO con su monto; más recientes primero.\
+        \ Sin fechas: últimos 30 días."
+      operationId: ventas
+      parameters:
+      - in: query
+        name: desde
+        required: false
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: hasta
+        required: false
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: pagina
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - in: query
+        name: tamano
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+          maximum: 200
+          minimum: 1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginaVentaResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Ventas registradas
+      tags:
+      - Ingresos
+  /api/trabajadores:
+    get:
+      description: DUENO · RF-02
+      operationId: listar
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrabajadorResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Listar trabajadores
+      tags:
+      - Cuentas
+    post:
+      description: DUENO · RF-02. El dueño inicial viene de los datos de prueba.
+      operationId: registrar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrabajadorRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrabajadorResponse"
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Correo o código de empleado ya registrado (CONFLICTO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Registrar trabajador
+      tags:
+      - Cuentas
+  /api/trabajadores/{id}/estado:
+    patch:
+      description: DUENO · RF-02. Un trabajador inactivo no puede iniciar sesión.
+      operationId: cambiarEstado
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EstadoRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrabajadorResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Activar o desactivar trabajador
+      tags:
+      - Cuentas
+  /api/usuarios/me:
+    get:
+      description: Autenticado (cualquier rol). La app y el panel lo usan al abrir
+        para saber el rol.
+      operationId: perfil
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsuarioResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Mi perfil
+      tags:
+      - Cuentas
+  /api/usuarios/me/fcm-token:
+    put:
+      description: Autenticado · RF-08. La app lo envía después del login.
+      operationId: registrarFcmToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FcmTokenRequest"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Registrar token FCM
+      tags:
+      - Cuentas
+  /api/usuarios/me/notificaciones:
+    get:
+      description: Autenticado · RF-08. Más recientes primero; respaldo si el push
+        FCM se retrasa.
+      operationId: notificaciones
+      parameters:
+      - description: true = solo las no leídas
+        in: query
+        name: soloNoLeidas
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NotificacionResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Mis notificaciones
+      tags:
+      - Cuentas
+  /api/usuarios/me/notificaciones/{id}/leida:
+    patch:
+      description: Autenticado · RF-08. Solo notificaciones propias.
+      operationId: marcarLeida
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Marcar notificación como leída
+      tags:
+      - Cuentas
+components:
+  schemas:
+    AlertaResponse:
+      type: object
+      description: "Alerta de stock generada por la base (RF-17), con el contacto\
+        \ del proveedor"
+      properties:
+        atendida:
+          type: boolean
+        cantidadDisponible:
+          type: integer
+          format: int32
+          description: Stock actual
+        fecha:
+          type: string
+          format: date-time
+        id:
+          type: integer
+          format: int32
+        idProducto:
+          type: integer
+          format: int32
+        mensaje:
+          type: string
+        nivelDetectado:
+          type: integer
+          format: int32
+          description: Stock cuando se generó la alerta
+        producto:
+          type: string
+        proveedor:
+          type: string
+        stockMinimo:
+          type: integer
+          format: int32
+        telefonoProveedor:
+          type: string
+        tipo:
+          type: string
+          enum:
+          - STOCK_BAJO
+          - STOCK_AGOTADO
+    CampoError:
+      type: object
+      description: Error de un campo
+      properties:
+        campo:
+          type: string
+          example: "items[0].cantidad"
+        mensaje:
+          type: string
+          example: debe ser mayor que 0
+    CategoriaRequest:
+      type: object
+      description: Alta o edición de categoría
+      properties:
+        descripcion:
+          type: string
+          maxLength: 200
+          minLength: 0
+        nombre:
+          type: string
+          example: Postres
+          maxLength: 50
+          minLength: 0
+      required:
+      - nombre
+    CategoriaResponse:
+      type: object
+      description: Categoría de productos
+      properties:
+        activo:
+          type: boolean
+        descripcion:
+          type: string
+        id:
+          type: integer
+          format: int32
+          example: 2
+        nombre:
+          type: string
+          example: Bebidas
+    CrearPedidoRequest:
+      type: object
+      description: Pedido armado en el carrito (RF-05)
+      properties:
+        horaRecojo:
+          type: string
+          description: "Hora de recojo elegida, formato HH:mm"
+          example: 12:50
+          pattern: "^\\d{2}:\\d{2}$"
+        items:
+          type: array
+          description: "Productos del pedido, sin repetir producto"
+          items:
+            $ref: "#/components/schemas/ItemPedidoRequest"
+          maxItems: 20
+          minItems: 0
+        observacion:
+          type: string
+          example: "Sin ají, por favor"
+          maxLength: 250
+          minLength: 0
+      required:
+      - horaRecojo
+      - items
+    ErrorRespuesta:
+      description: Error de la API
+      properties:
+        codigo:
+          type: string
+          description: Código estable para que los clientes decidan qué hacer
+          example: VALIDACION
+        detalles:
+          type: array
+          description: Errores por campo (solo en VALIDACION); vacío en el resto
+          items:
+            $ref: "#/components/schemas/CampoError"
+        mensaje:
+          type: string
+          description: Mensaje en español para mostrar al usuario
+          example: Revisa los campos marcados
+    EstadoRequest:
+      type: object
+      description: Activar o desactivar sin borrar
+      properties:
+        activo:
+          type: boolean
+          example: false
+      required:
+      - activo
+    FcmTokenRequest:
+      type: object
+      description: Token de Firebase Cloud Messaging del dispositivo (RF-08)
+      properties:
+        token:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - token
+    IngresoPeriodoResponse:
+      type: object
+      description: "Ingresos de un día, semana o mes (solo pagos PAGADO)"
+      properties:
+        ingresoTotal:
+          type: number
+          example: 612.5
+        inicio:
+          type: string
+          format: date
+          description: "Primer día del periodo (lunes en SEMANA, día 1 en MES)"
+          example: 2026-10-26
+        pedidosPagados:
+          type: integer
+          format: int64
+          example: 57
+        ticketPromedio:
+          type: number
+          example: 10.75
+    InventarioResponse:
+      type: object
+      description: Stock de un producto después de la recarga
+      properties:
+        cantidadDisponible:
+          type: integer
+          format: int32
+        fechaActualizacion:
+          type: string
+          format: date-time
+        idProducto:
+          type: integer
+          format: int32
+        producto:
+          type: string
+        stockMinimo:
+          type: integer
+          format: int32
+    ItemPedidoRequest:
+      type: object
+      description: Línea del carrito
+      properties:
+        cantidad:
+          type: integer
+          format: int32
+          example: 2
+          maximum: 20
+          minimum: 1
+        idProducto:
+          type: integer
+          format: int32
+          example: 7
+      required:
+      - cantidad
+      - idProducto
+    LineaDespachoResponse:
+      type: object
+      description: Producto a preparar
+      properties:
+        cantidad:
+          type: integer
+          format: int32
+          example: 2
+        producto:
+          type: string
+          example: Tamal criollo
+    LineaPedidoResponse:
+      type: object
+      description: Línea del pedido con el precio al momento de la compra
+      properties:
+        cantidad:
+          type: integer
+          format: int32
+          example: 2
+        idProducto:
+          type: integer
+          format: int32
+          example: 2
+        nombre:
+          type: string
+          example: Tamal criollo
+        precioUnitario:
+          type: number
+          example: 4.0
+        subtotal:
+          type: number
+          example: 8.0
+    LoginRequest:
+      type: object
+      description: "Credenciales de inicio de sesión (RF-01, RF-02)"
+      properties:
+        contrasena:
+          type: string
+          example: Cafetin2026
+          minLength: 1
+        correo:
+          type: string
+          format: email
+          example: ebarreram@ucvvirtual.edu.pe
+          minLength: 1
+      required:
+      - contrasena
+      - correo
+    NotificacionResponse:
+      type: object
+      description: Notificación del usuario (RF-08); la app las consulta al abrirse
+        por si FCM se retrasa
+      properties:
+        fecha:
+          type: string
+          format: date-time
+        id:
+          type: integer
+          format: int32
+        idPedido:
+          type: integer
+          format: int32
+          description: Pedido relacionado; nulo en alertas de stock
+        leida:
+          type: boolean
+        mensaje:
+          type: string
+          example: Tu pedido PED-0426 está listo
+        tipo:
+          type: string
+          description: "PEDIDO_CONFIRMADO, PEDIDO_LISTO, PEDIDO_ENTREGADO, PEDIDO_CANCELADO,\
+            \ STOCK_BAJO o STOCK_AGOTADO"
+    PagarRequest:
+      type: object
+      description: "Método de pago (RF-06). En la v1 solo YAPE, PLIN o TARJETA"
+      properties:
+        metodoPago:
+          type: string
+          enum:
+          - YAPE
+          - PLIN
+          - TARJETA
+          example: YAPE
+      required:
+      - metodoPago
+    PaginaPedidoResumenResponse:
+      type: object
+      description: Página de resultados
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: "#/components/schemas/PedidoResumenResponse"
+        pagina:
+          type: integer
+          format: int32
+          description: "Número de página, desde 0"
+          example: 0
+        tamano:
+          type: integer
+          format: int32
+          example: 20
+        totalElementos:
+          type: integer
+          format: int64
+          example: 57
+        totalPaginas:
+          type: integer
+          format: int32
+          example: 3
+    PaginaVentaResponse:
+      type: object
+      description: Página de resultados
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: "#/components/schemas/VentaResponse"
+        pagina:
+          type: integer
+          format: int32
+          description: "Número de página, desde 0"
+          example: 0
+        tamano:
+          type: integer
+          format: int32
+          example: 20
+        totalElementos:
+          type: integer
+          format: int64
+          example: 57
+        totalPaginas:
+          type: integer
+          format: int32
+          example: 3
+    PagoResponse:
+      type: object
+      description: Pago del pedido
+      properties:
+        estado:
+          type: string
+          enum:
+          - PENDIENTE
+          - PAGADO
+          - FALLIDO
+          - REEMBOLSADO
+        fecha:
+          type: string
+          format: date-time
+        metodoPago:
+          type: string
+          enum:
+          - YAPE
+          - PLIN
+          - TARJETA
+          - EFECTIVO
+        monto:
+          type: number
+          example: 10.5
+        referencia:
+          type: string
+          description: Código de operación de la pasarela
+          example: PL-220931
+    PedidoDespachoResponse:
+      type: object
+      description: Pedido pagado en el tablero de despacho
+      properties:
+        codigoPedido:
+          type: string
+          example: PED-0426
+        estado:
+          type: string
+          enum:
+          - PENDIENTE
+          - CONFIRMADO
+          - EN_PREPARACION
+          - LISTO
+          - ENTREGADO
+          - CANCELADO
+        estudiante:
+          type: string
+          example: María Quiroz Vásquez
+        horaRecojo:
+          type: string
+          example: 12:50
+        idPedido:
+          type: integer
+          format: int32
+          example: 2
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineaDespachoResponse"
+        metodoPago:
+          type: string
+          enum:
+          - YAPE
+          - PLIN
+          - TARJETA
+          - EFECTIVO
+        reciboVerificado:
+          type: boolean
+          description: true cuando el código del recibo ya se verificó (habilita entregar)
+        total:
+          type: number
+          example: 10.5
+        trabajador:
+          type: string
+          description: Trabajador que lo confirmó; nulo si aún está PENDIENTE
+          example: Carmen Díaz Morales
+    PedidoResponse:
+      type: object
+      description: "Pedido con su detalle, pago y recibo"
+      properties:
+        codigoPedido:
+          type: string
+          example: PED-0426
+        estado:
+          type: string
+          enum:
+          - PENDIENTE
+          - CONFIRMADO
+          - EN_PREPARACION
+          - LISTO
+          - ENTREGADO
+          - CANCELADO
+        fechaHora:
+          type: string
+          format: date-time
+        horaRecojo:
+          type: string
+          example: 12:50
+        id:
+          type: integer
+          format: int32
+          example: 2
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineaPedidoResponse"
+        observacion:
+          type: string
+        pago:
+          $ref: "#/components/schemas/PagoResponse"
+          description: Nulo si aún no se intentó pagar
+        recibo:
+          $ref: "#/components/schemas/ReciboResponse"
+          description: Nulo hasta que el pago queda PAGADO
+        total:
+          type: number
+          description: Calculado por la base
+          example: 10.5
+    PedidoResumenResponse:
+      type: object
+      description: Pedido en el historial (RF-09)
+      properties:
+        cantidadProductos:
+          type: integer
+          format: int32
+          description: Unidades en total
+          example: 2
+        codigoPedido:
+          type: string
+          example: PED-0425
+        estado:
+          type: string
+          enum:
+          - PENDIENTE
+          - CONFIRMADO
+          - EN_PREPARACION
+          - LISTO
+          - ENTREGADO
+          - CANCELADO
+        estadoPago:
+          type: string
+          description: Nulo si nunca se intentó pagar
+          enum:
+          - PENDIENTE
+          - PAGADO
+          - FALLIDO
+          - REEMBOLSADO
+        fechaHora:
+          type: string
+          format: date-time
+        horaRecojo:
+          type: string
+          example: 10:20
+        id:
+          type: integer
+          format: int32
+        total:
+          type: number
+    ProductoActualizarRequest:
+      type: object
+      description: "Edición de producto (RF-19). El stock se cambia con la recarga,\
+        \ no aquí"
+      properties:
+        descripcion:
+          type: string
+          maxLength: 250
+          minLength: 0
+        idCategoria:
+          type: integer
+          format: int32
+        idProveedor:
+          type: integer
+          format: int32
+        imagenUrl:
+          type: string
+          maxLength: 300
+          minLength: 0
+        nombre:
+          type: string
+          maxLength: 100
+          minLength: 0
+        precio:
+          type: number
+          minimum: 0.01
+        stockMinimo:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - idCategoria
+      - nombre
+      - precio
+      - stockMinimo
+    ProductoCatalogoResponse:
+      type: object
+      description: Producto del catálogo con su disponibilidad
+      properties:
+        cantidadDisponible:
+          type: integer
+          format: int32
+          example: 39
+        categoria:
+          type: string
+          example: Bebidas
+        descripcion:
+          type: string
+          example: Café de Chanchamayo
+        estadoStock:
+          type: string
+          description: La app deshabilita la tarjeta si es AGOTADO
+          enum:
+          - DISPONIBLE
+          - POCAS UNIDADES
+          - AGOTADO
+        idProducto:
+          type: integer
+          format: int32
+          example: 7
+        nombre:
+          type: string
+          example: Café pasado
+        precio:
+          type: number
+          example: 2.5
+    ProductoRequest:
+      type: object
+      description: Alta de producto con su stock inicial (RF-15)
+      properties:
+        descripcion:
+          type: string
+          maxLength: 250
+          minLength: 0
+        idCategoria:
+          type: integer
+          format: int32
+          example: 3
+        idProveedor:
+          type: integer
+          format: int32
+          description: Nulo para productos de preparación propia
+          example: 3
+        imagenUrl:
+          type: string
+          maxLength: 300
+          minLength: 0
+        nombre:
+          type: string
+          example: Chifles 50 g
+          maxLength: 100
+          minLength: 0
+        precio:
+          type: number
+          example: 2.0
+          minimum: 0.01
+        stockInicial:
+          type: integer
+          format: int32
+          example: 30
+          minimum: 0
+        stockMinimo:
+          type: integer
+          format: int32
+          example: 10
+          minimum: 0
+      required:
+      - idCategoria
+      - nombre
+      - precio
+      - stockInicial
+      - stockMinimo
+    ProductoResponse:
+      type: object
+      description: "Producto con su stock, para el panel del dueño"
+      properties:
+        activo:
+          type: boolean
+          description: false = deshabilitado por el dueño (RF-19)
+        cantidadDisponible:
+          type: integer
+          format: int32
+        categoria:
+          type: string
+        descripcion:
+          type: string
+        estadoStock:
+          type: string
+          enum:
+          - DISPONIBLE
+          - POCAS UNIDADES
+          - AGOTADO
+        fechaActualizacionStock:
+          type: string
+          format: date-time
+        id:
+          type: integer
+          format: int32
+        idCategoria:
+          type: integer
+          format: int32
+        idProveedor:
+          type: integer
+          format: int32
+        imagenUrl:
+          type: string
+        nombre:
+          type: string
+        precio:
+          type: number
+        proveedor:
+          type: string
+        stockMinimo:
+          type: integer
+          format: int32
+    ProductoVendidoResponse:
+      type: object
+      description: Producto en el ranking de más vendidos (RF-22)
+      properties:
+        categoria:
+          type: string
+          example: Menú
+        idProducto:
+          type: integer
+          format: int32
+          example: 1
+        ingresoGenerado:
+          type: number
+          example: 960.0
+        nombre:
+          type: string
+          example: Menú del día
+        unidadesVendidas:
+          type: integer
+          format: int64
+          example: 120
+    ProveedorRequest:
+      type: object
+      description: Alta o edición de proveedor
+      properties:
+        correo:
+          type: string
+          format: email
+          maxLength: 120
+          minLength: 0
+        direccion:
+          type: string
+          maxLength: 200
+          minLength: 0
+        nombre:
+          type: string
+          example: Distribuidora Nor-Sur
+          maxLength: 100
+          minLength: 0
+        telefono:
+          type: string
+          example: "044123456"
+          minLength: 1
+          pattern: "^[0-9]{6,15}$"
+      required:
+      - nombre
+      - telefono
+    ProveedorResponse:
+      type: object
+      description: Proveedor
+      properties:
+        activo:
+          type: boolean
+        correo:
+          type: string
+        direccion:
+          type: string
+        id:
+          type: integer
+          format: int32
+        nombre:
+          type: string
+        telefono:
+          type: string
+    RecargaRequest:
+      type: object
+      description: "Recarga manual de stock (RF-18): suma unidades a las disponibles"
+      properties:
+        cantidad:
+          type: integer
+          format: int32
+          description: Unidades que se agregan
+          example: 24
+          exclusiveMinimum: 0
+      required:
+      - cantidad
+    ReciboResponse:
+      type: object
+      description: "Recibo digital (RF-07): el estudiante muestra el código al recoger"
+      properties:
+        codigoVerificacion:
+          type: string
+          example: DR-0426-3390
+        fechaEmision:
+          type: string
+          format: date-time
+        verificado:
+          type: boolean
+    RecuperarRequest:
+      type: object
+      description: Pedir el enlace de recuperación de contraseña (RF-03)
+      properties:
+        correo:
+          type: string
+          format: email
+          example: ebarreram@ucvvirtual.edu.pe
+          minLength: 1
+      required:
+      - correo
+    RegistroEstudianteRequest:
+      type: object
+      description: Registro de un estudiante (RF-01)
+      properties:
+        apellidos:
+          type: string
+          example: Barrera Martínez
+          maxLength: 80
+          minLength: 0
+        carrera:
+          type: string
+          example: Ingeniería de Sistemas
+          maxLength: 80
+          minLength: 0
+        ciclo:
+          type: integer
+          format: int32
+          example: 6
+          maximum: 12
+          minimum: 1
+        codigo:
+          type: string
+          description: Código de estudiante
+          example: "2021045678"
+          maxLength: 15
+          minLength: 0
+        contrasena:
+          type: string
+          example: Cafetin2026
+          maxLength: 72
+          minLength: 8
+        correo:
+          type: string
+          format: email
+          example: ebarreram@ucvvirtual.edu.pe
+          maxLength: 120
+          minLength: 0
+        nombre:
+          type: string
+          example: Eliú
+          maxLength: 60
+          minLength: 2
+        telefono:
+          type: string
+          example: "914567890"
+          pattern: "^[0-9]{9}$"
+      required:
+      - apellidos
+      - carrera
+      - ciclo
+      - codigo
+      - contrasena
+      - correo
+      - nombre
+    RestablecerRequest:
+      type: object
+      description: Fijar una nueva contraseña con el token recibido (RF-03)
+      properties:
+        nuevaContrasena:
+          type: string
+          maxLength: 72
+          minLength: 8
+        token:
+          type: string
+          description: Token del enlace de recuperación
+          minLength: 1
+      required:
+      - nuevaContrasena
+      - token
+    TokenResponse:
+      type: object
+      description: Token JWT y datos del usuario
+      properties:
+        expiraEn:
+          type: integer
+          format: int64
+          description: Segundos hasta que el token expira
+          example: 28800
+        token:
+          type: string
+          description: "JWT para el encabezado Authorization: Bearer"
+        usuario:
+          $ref: "#/components/schemas/UsuarioResponse"
+    TrabajadorRequest:
+      type: object
+      description: Alta de un trabajador por el dueño (RF-02)
+      properties:
+        apellidos:
+          type: string
+          example: Díaz Morales
+          maxLength: 80
+          minLength: 0
+        codigoEmpleado:
+          type: string
+          example: TRB-003
+          maxLength: 15
+          minLength: 0
+        contrasena:
+          type: string
+          description: Contraseña inicial
+          maxLength: 72
+          minLength: 8
+        correo:
+          type: string
+          format: email
+          example: carmen.diaz@cafetin.pe
+          maxLength: 120
+          minLength: 0
+        nombre:
+          type: string
+          example: Carmen
+          maxLength: 60
+          minLength: 2
+        telefono:
+          type: string
+          pattern: "^[0-9]{9}$"
+        turno:
+          type: string
+          enum:
+          - MANANA
+          - TARDE
+          - NOCHE
+      required:
+      - apellidos
+      - codigoEmpleado
+      - contrasena
+      - correo
+      - nombre
+      - turno
+    TrabajadorResponse:
+      type: object
+      description: Trabajador registrado
+      properties:
+        activo:
+          type: boolean
+        apellidos:
+          type: string
+        codigoEmpleado:
+          type: string
+        correo:
+          type: string
+        fechaIngreso:
+          type: string
+          format: date
+        id:
+          type: integer
+          format: int32
+        nombre:
+          type: string
+        telefono:
+          type: string
+        turno:
+          type: string
+          enum:
+          - MANANA
+          - TARDE
+          - NOCHE
+    UsuarioResponse:
+      type: object
+      description: Usuario autenticado
+      properties:
+        apellidos:
+          type: string
+          example: Barrera Martínez
+        correo:
+          type: string
+          example: ebarreram@ucvvirtual.edu.pe
+        id:
+          type: integer
+          format: int32
+          example: 4
+        nombre:
+          type: string
+          example: Eliú
+        rol:
+          type: string
+          description: "Rol: decide el menú en el panel y el acceso en la API"
+          enum:
+          - ESTUDIANTE
+          - TRABAJADOR
+          - DUENO
+    VentaResponse:
+      type: object
+      description: "Venta registrada (RF-20): un pago PAGADO"
+      properties:
+        codigoPedido:
+          type: string
+          example: PED-0425
+        estudiante:
+          type: string
+          example: Eliú Barrera Martínez
+        fecha:
+          type: string
+          format: date-time
+        idPago:
+          type: integer
+          format: int32
+        metodoPago:
+          type: string
+          enum:
+          - YAPE
+          - PLIN
+          - TARJETA
+          - EFECTIVO
+        monto:
+          type: number
+          example: 10.0
+    VerificarReciboRequest:
+      type: object
+      description: Código que muestra el estudiante (RF-13)
+      properties:
+        codigoVerificacion:
+          type: string
+          example: DR-0426-3390
+          minLength: 1
+          pattern: "^DR-\\d+-\\d{4}$"
+      required:
+      - codigoVerificacion
+  securitySchemes:
+    bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

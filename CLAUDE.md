@@ -97,12 +97,14 @@ Paquetes por módulo y, dentro, capas `controller` → `service` → `repository
 ### Estados del pedido
 
 `PENDIENTE` (pagado) → `CONFIRMADO` (RF-11, asigna trabajador) → `EN_PREPARACION` → `LISTO` (RF-12)
-→ `ENTREGADO` (RF-14, exige recibo verificado, RF-13). `CANCELADO` solo desde `PENDIENTE`.
+→ `ENTREGADO` (RF-14, exige recibo verificado, RF-13). `CANCELADO` solo desde `PENDIENTE` **sin pagar**
+(un pedido con pago `PAGADO` no se cancela; no hay reembolsos en la v1).
 Una sola clase decide las transiciones; cualquier otra → HTTP 409.
 `PENDIENTE` cubre pedidos pagados y sin pagar: lo que los distingue es `pago.estado`, no `pedido.estado`.
 
-Métodos de pago: `YAPE`, `PLIN`, `TARJETA`, `EFECTIVO`. Pasarela **simulada** detrás de la interfaz
-`PasarelaPago` [PROPUESTA — confirmar]. No se guardan datos de tarjeta, solo `referencia`.
+Métodos de pago aceptados por la API: `YAPE`, `PLIN`, `TARJETA` (`EFECTIVO` existe en el enum de la BD
+pero se rechaza con 400). Pasarela **simulada** detrás de la interfaz `PasarelaPago`; un rechazo responde
+402 `PAGO_RECHAZADO` y el pedido se conserva. No se guardan datos de tarjeta, solo `referencia`.
 
 ### Pagos y códigos
 
@@ -110,6 +112,20 @@ Métodos de pago: `YAPE`, `PLIN`, `TARJETA`, `EFECTIVO`. Pasarela **simulada** d
 - `pago.monto` = `pedido.total` refrescado de la BD; nunca un monto que mande el cliente.
 - `codigo_pedido`: `PED-<secuencia>` sin relleno fijo (cabe en `VARCHAR(12)`).
 - `recibo.codigo_verificacion`: formato `DR-<nº>-<4 dígitos aleatorios>` (informe, Tabla 16); reintentar si choca con el `UNIQUE`.
+
+### Contrato y errores
+
+- `docs/openapi.yaml` es el contrato congelado. `ContratoOpenApiTest` falla si el código se aparta de él.
+  Si un cambio es a propósito y el equipo lo aprobó: `./mvnw test -Dtest=ContratoOpenApiTest -Dcontrato.actualizar=true`.
+- DTOs como `record` en `<modulo>.dto`; controllers en `<modulo>.controller`. Endpoints sin implementar lanzan
+  `ApiException.NoImplementado` (501).
+- Errores: los servicios lanzan `ApiException` (o sus subclases `NoEncontrado`, `TransicionInvalida`, `ReglaNegocio`);
+  `ManejadorErrores` arma `{codigo, mensaje, detalles}`. Los clientes deciden por `codigo` (`CodigoError`):
+  `VALIDACION`, `CUERPO_INVALIDO`, `PARAMETRO_INVALIDO` (400) · `NO_AUTENTICADO` (401) · `PAGO_RECHAZADO` (402) ·
+  `ACCESO_DENEGADO` (403) · `NO_ENCONTRADO` (404) · `CONFLICTO`, `STOCK_INSUFICIENTE`, `TRANSICION_INVALIDA`,
+  `REGLA_NEGOCIO` (409) · `ERROR_INTERNO` (500) · `NO_IMPLEMENTADO` (501).
+- La seguridad (Fase 2) debe responder 401 y 403 con este mismo formato.
+- El despacho nunca devuelve `codigo_verificacion`: el trabajador lo pide al estudiante (RF-13).
 
 ### Seguridad
 
@@ -150,10 +166,10 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 02/11/2026 · Panel web en React + TypeScript (Vite), desplegado en Vercel · Vercel aloja el sitio estático; Thymeleaf no podría ir ahí.
 - 02/11/2026 · API en Render como contenedor Docker · Vercel no ejecuta servidores Java.
 - 02/11/2026 · Spring Boot 4.1 y Java 21 (no Boot 3) · Spring Initializr ya no ofrece Boot 3, que dejó de recibir parches gratuitos. Pendiente: actualizar el informe.
-- [pendiente] Pasarela simulada
-- [pendiente] Tiempo real: polling cada 5 s en el panel; push FCM al estudiante
-- [pendiente] Pago en `EFECTIVO`: quitarlo de la app, o entra a despacho con pago `PENDIENTE` y se marca `PAGADO` al entregar
-- [pendiente] Cancelar pedido pagado: no permitido, o pago `REEMBOLSADO` + reponer stock en el servicio
+- 02/11/2026 · Pasarela de pago simulada detrás de la interfaz `PasarelaPago` · una real exige cuenta comercial y no aporta a lo que evalúa el curso.
+- 02/11/2026 · Tiempo real: polling cada 5 s en el panel (despacho y alertas) y push FCM al estudiante; SSE solo si sobra tiempo · menor riesgo.
+- 02/11/2026 · Sin pago en `EFECTIVO` en la v1: la API acepta YAPE, PLIN y TARJETA · en efectivo el stock no se reservaba y el despacho no veía esos pedidos. Pendiente: actualizar CU-02 del informe.
+- 02/11/2026 · Solo se cancelan pedidos sin pagar; no hay reembolsos en la v1 · evita reponer stock y el flujo `REEMBOLSADO`.
 
 ## Qué no hacer
 
