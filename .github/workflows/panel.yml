@@ -1,0 +1,31 @@
+name: Panel web
+
+# Corre los tests y el build del panel en cada PR que lo toque.
+on:
+  pull_request:
+    paths:
+      - "panel-web/**"
+      - ".github/workflows/panel.yml"
+  push:
+    branches: [main]
+    paths:
+      - "panel-web/**"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panel-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: panel-web/package-lock.json
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
