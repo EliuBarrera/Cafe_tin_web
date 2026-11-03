@@ -12,4 +12,9 @@ Stack: React 18 + TypeScript (Vite), React Router, TanStack Query. Despliegue en
 - Vercel: proyecto con *Root Directory* `panel-web`, framework Vite, salida `dist`.
   `vercel.json` con un rewrite de todas las rutas a `/index.html` para que React Router funcione
   al recargar la página.
+- React 18 por decisión del equipo: por eso `react-router` va en la v7 (la v8 exige React 19).
+- Tipos: `npm run api:tipos` regenera `src/api/esquema.d.ts`; usa `src/api/tipos.ts`.
+- Peticiones siempre con `api()` de `src/api/cliente.ts`: añade el JWT y convierte los errores en `ErrorApi`.
+- Pantalla nueva: en `src/navegacion.tsx` cambia `pagina` de su sección por el componente real;
+  el menú y la protección por rol salen de esa misma lista.
 - Hecho = `npm test` en verde.
