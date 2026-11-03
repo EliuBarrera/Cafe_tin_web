@@ -255,13 +255,13 @@ Los tres roles inician sesión con JWT y cada endpoint queda protegido por rol d
 
 **API**
 
-- [ ] Spring Security sin sesión, filtro JWT, BCrypt para contraseñas.
-- [ ] `POST /api/auth/registro` (estudiante), `POST /api/auth/login` (token + rol), `POST /api/auth/recuperar`, `POST /api/auth/restablecer`.
-- [ ] `POST /api/trabajadores` solo para `DUENO` (el dueño registra a los trabajadores); el dueño inicial viene de V2.
-- [ ] Reglas por ruta: `/api/inventario/**` y `/api/reportes/**` → `DUENO`; `/api/despacho/**` → `TRABAJADOR` y `DUENO`; `/api/pedidos/**` → `ESTUDIANTE`.
-- [ ] Token de recuperación guardado como hash y con expiración; en `dev` el enlace se escribe en el log.
-- [ ] CORS para el origen del panel.
-- [ ] Tests: login correcto, contraseña errónea → 401, correo duplicado → 409, estudiante en `/api/reportes` → 403.
+- [x] Spring Security sin sesión, filtro JWT, BCrypt para contraseñas.
+- [x] `POST /api/auth/registro` (estudiante), `POST /api/auth/login` (token + rol), `POST /api/auth/recuperar`, `POST /api/auth/restablecer`.
+- [x] `POST /api/trabajadores` solo para `DUENO` (el dueño registra a los trabajadores); el dueño inicial viene de V2.
+- [x] Reglas por ruta: `/api/inventario/**` y `/api/reportes/**` → `DUENO`; `/api/despacho/**` → `TRABAJADOR` y `DUENO`; `/api/pedidos/**` → `ESTUDIANTE`.
+- [x] Token de recuperación guardado como hash y con expiración; en `dev` el enlace se escribe en el log.
+- [x] CORS para el origen del panel.
+- [x] Tests: login correcto, contraseña errónea → 401, correo duplicado → 409, estudiante en `/api/reportes` → 403.
 
 **App Android**
 
@@ -270,8 +270,8 @@ Los tres roles inician sesión con JWT y cada endpoint queda protegido por rol d
 
 **Panel web**
 
-- [ ] Vite + React + TypeScript, React Router, TanStack Query y tipos generados desde `docs/openapi.yaml`.
-- [ ] Login y menú según rol (trabajador: Despacho; dueño: todo), rutas protegidas.
+- [x] Vite + React + TypeScript, React Router, TanStack Query y tipos generados desde `docs/openapi.yaml`.
+- [x] Login y menú según rol (trabajador: Despacho; dueño: todo), rutas protegidas.
 
 Prompt sugerido (API):
 
@@ -356,7 +356,7 @@ Hecho cuando: el dueño del seed registra un producto, lo vende hasta el mínimo
 El estudiante recibe un push cuando su pedido pasa a confirmado, listo o entregado; el panel ya se actualiza por polling desde la Fase 3.
 
 - [ ] Proyecto en Firebase. `google-services.json` en la app y la credencial de servicio del Admin SDK en el backend como variable de entorno, nunca en el repo.
-- [ ] Migración V3 con `usuario.fcm_token`, si no se hizo en la Fase 0.
+- [x] `usuario.fcm_token` ya está en V1: no hace falta migración.
 - [ ] App: registrar el token tras el login (`PUT /api/usuarios/me/fcm-token`) y pedir el permiso de notificaciones en Android 13 o superior.
 - [ ] API: `NotificacionService` guarda en `notificacion` y envía por FCM después del commit (`@TransactionalEventListener(phase = AFTER_COMMIT)`), así no se notifica un cambio revertido y el pago sigue por debajo de 5 s (RNF-02).
 - [ ] Panel: contador de alertas de stock para el dueño (polling).

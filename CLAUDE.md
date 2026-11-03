@@ -124,7 +124,7 @@ pero se rechaza con 400). Pasarela **simulada** detrás de la interfaz `Pasarela
   `VALIDACION`, `CUERPO_INVALIDO`, `PARAMETRO_INVALIDO` (400) · `NO_AUTENTICADO` (401) · `PAGO_RECHAZADO` (402) ·
   `ACCESO_DENEGADO` (403) · `NO_ENCONTRADO` (404) · `CONFLICTO`, `STOCK_INSUFICIENTE`, `TRANSICION_INVALIDA`,
   `REGLA_NEGOCIO` (409) · `ERROR_INTERNO` (500) · `NO_IMPLEMENTADO` (501).
-- La seguridad (Fase 2) debe responder 401 y 403 con este mismo formato.
+- La seguridad responde 401 y 403 con este mismo formato (`RespuestasSeguridad`).
 - El despacho nunca devuelve `codigo_verificacion`: el trabajador lo pide al estudiante (RF-13).
 
 ### Seguridad
@@ -134,8 +134,10 @@ Spring Security sin sesión + JWT. Roles `ESTUDIANTE`, `TRABAJADOR`, `DUENO`.
 - `/api/inventario/**`, `/api/productos/**`, `/api/alertas/**`, `/api/reportes/**`, `/api/trabajadores/**` → solo DUENO (RNF-05)
 - `GET /api/catalogo` y `GET /api/categorias` → autenticado · escritura en `/api/categorias/**` y `/api/proveedores/**` → DUENO
 - `/api/usuarios/me/**` → autenticado · cualquier otra ruta → denegada
+- Id del usuario autenticado: `UsuarioActual.id()` (`cuentas.seguridad`). En tests: `@WithMockUser(username = "4", roles = "ESTUDIANTE")`.
 - `GET /api/pedidos/{id}`: solo el estudiante dueño del pedido; uno ajeno → 404.
-- Token de recuperación de contraseña: guardar hash, con expiración.
+- Token de recuperación de contraseña: se guarda su hash SHA-256, expira a los 30 min y es de un solo uso. La entrega va detrás de `EnvioRecuperacion`.
+- Cada petición con JWT consulta si el usuario sigue activo: uno desactivado recibe 401 de inmediato.
 
 ## Pruebas
 
@@ -170,6 +172,7 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 02/11/2026 · Tiempo real: polling cada 5 s en el panel (despacho y alertas) y push FCM al estudiante; SSE solo si sobra tiempo · menor riesgo.
 - 02/11/2026 · Sin pago en `EFECTIVO` en la v1: la API acepta YAPE, PLIN y TARJETA · en efectivo el stock no se reservaba y el despacho no veía esos pedidos. Pendiente: actualizar CU-02 del informe.
 - 02/11/2026 · Solo se cancelan pedidos sin pagar; no hay reembolsos en la v1 · evita reponer stock y el flujo `REEMBOLSADO`.
+- 02/11/2026 · JWT con `spring-boot-starter-security-oauth2-resource-server` (HS256, 8 h; `sub` = id, `rol` = tipo) · oficial de Spring, Boot gestiona la versión y evita un filtro propio.
 
 ## Qué no hacer
 
