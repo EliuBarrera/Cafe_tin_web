@@ -20,13 +20,13 @@ import pe.edu.ucv.cafetin.TestcontainersConfiguration;
 
 /**
  * Formato único de error {codigo, mensaje, detalles} a través de controllers reales.
- * Usuario simulado: la seguridad por rol llega en la Fase 2.
+ * Usuario simulado con rol ESTUDIANTE, el que exige {@code /api/pedidos/**}.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
-@WithMockUser
+@WithMockUser(roles = "ESTUDIANTE")
 class ManejadorErroresTest {
 
 	@Autowired
@@ -76,6 +76,7 @@ class ManejadorErroresTest {
 	}
 
 	@Test
+	@WithMockUser(roles = "DUENO")
 	void parametroFueraDeRangoResponde400() throws Exception {
 		mvc.perform(get("/api/reportes/mas-vendidos").param("limite", "0"))
 				.andExpect(status().isBadRequest())
@@ -85,7 +86,8 @@ class ManejadorErroresTest {
 
 	@Test
 	void rutaInexistenteResponde404() throws Exception {
-		mvc.perform(get("/api/no-existe"))
+		// Bajo /api/usuarios/me/**: otra ruta la denegaría la seguridad antes de llegar aquí.
+		mvc.perform(get("/api/usuarios/me/no-existe"))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.codigo").value("NO_ENCONTRADO"));
 	}

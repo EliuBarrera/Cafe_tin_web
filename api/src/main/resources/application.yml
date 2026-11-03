@@ -38,6 +38,17 @@ spring:
     default-schema: cafetin
     locations: classpath:db/migration
 
+cafetin:
+  jwt:
+    secreto: ${JWT_SECRET:}           # mínimo 32 bytes; sin él la API no arranca
+    expiracion-segundos: 28800        # 8 horas (TokenResponse.expiraEn)
+  cors:
+    origenes: ${CORS_ORIGINS:http://localhost:5173}
+  recuperacion:
+    minutos: 30
+    enlace-base: http://localhost:5173/restablecer?token=
+    registrar-enlace: false           # true solo en dev: escribe el token en el log
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -52,6 +63,9 @@ spring:
       on-profile: dev
   flyway:
     locations: classpath:db/migration,classpath:db/datos-dev
+cafetin:
+  recuperacion:
+    registrar-enlace: true
 
 ---
 # Tests: Testcontainers (PostgreSQL 16) aporta la conexión; sin datos de prueba.
@@ -59,6 +73,9 @@ spring:
   config:
     activate:
       on-profile: test
+cafetin:
+  jwt:
+    secreto: secreto-solo-para-tests-no-usar-en-ningun-entorno
 
 ---
 # Producción (Render + rama main de Neon): solo migraciones del esquema, sin Swagger.
