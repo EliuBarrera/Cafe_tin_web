@@ -35,6 +35,13 @@ public final class PedidosDto {
 			@Size(max = 250) @Schema(example = "Sin ají, por favor") String observacion,
 			@NotEmpty @Size(max = 20) @Schema(description = "Productos del pedido, sin repetir producto")
 			List<@Valid ItemPedidoRequest> items) {
+
+		@JsonIgnore
+		@Schema(hidden = true)
+		@AssertTrue(message = "Un producto aparece más de una vez: junta las cantidades en una sola línea")
+		public boolean isSinProductosRepetidos() {
+			return items == null || items.stream().map(ItemPedidoRequest::idProducto).distinct().count() == items.size();
+		}
 	}
 
 	@Schema(description = "Línea del carrito")

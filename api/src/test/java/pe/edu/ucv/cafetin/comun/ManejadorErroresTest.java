@@ -34,8 +34,7 @@ class ManejadorErroresTest {
 
 	@Test
 	void endpointSinImplementarResponde501() throws Exception {
-		mvc.perform(post("/api/pedidos").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("""
-				{"horaRecojo": "12:50", "items": [{"idProducto": 7, "cantidad": 2}]}"""))
+		mvc.perform(post("/api/pedidos/7/cancelar").with(csrf()))
 				.andExpect(status().isNotImplemented())
 				.andExpect(jsonPath("$.codigo").value("NO_IMPLEMENTADO"))
 				.andExpect(jsonPath("$.mensaje").value("Pendiente de implementar (RF-05)"))
