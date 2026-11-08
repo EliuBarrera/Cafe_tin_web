@@ -19,7 +19,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import pe.edu.ucv.cafetin.comun.dto.Pagina;
-import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.comun.error.ErrorRespuesta;
 import pe.edu.ucv.cafetin.cuentas.seguridad.UsuarioActual;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.CrearPedidoRequest;
@@ -68,7 +67,7 @@ public class PedidoController {
 			cancelado (REGLA_NEGOCIO)""",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoResponse pagar(@PathVariable Integer id, @Valid @RequestBody PagarRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-06");
+		return servicio.pagar(usuario.id(), id, solicitud.metodoPago());
 	}
 
 	@PostMapping("/{id}/cancelar")
@@ -78,7 +77,7 @@ public class PedidoController {
 	@ApiResponse(responseCode = "409", description = "El pedido ya está pagado o no está PENDIENTE (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoResponse cancelar(@PathVariable Integer id) {
-		throw new ApiException.NoImplementado("RF-05");
+		return servicio.cancelar(usuario.id(), id);
 	}
 
 	@GetMapping("/{id}")

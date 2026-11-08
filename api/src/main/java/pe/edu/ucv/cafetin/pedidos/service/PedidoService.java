@@ -1,5 +1,6 @@
 package pe.edu.ucv.cafetin.pedidos.service;
 
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -23,15 +24,21 @@ import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.PagoResponse;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.PedidoResponse;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.PedidoResumenResponse;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.ReciboResponse;
+import pe.edu.ucv.cafetin.pedidos.modelo.EstadoPago;
+import pe.edu.ucv.cafetin.pedidos.modelo.EstadoPedido;
+import pe.edu.ucv.cafetin.pedidos.modelo.MetodoPago;
 import pe.edu.ucv.cafetin.pedidos.modelo.Pago;
 import pe.edu.ucv.cafetin.pedidos.modelo.Pedido;
+import pe.edu.ucv.cafetin.pedidos.modelo.Recibo;
 import pe.edu.ucv.cafetin.pedidos.repository.PagoRepository;
 import pe.edu.ucv.cafetin.pedidos.repository.PedidoRepository;
 import pe.edu.ucv.cafetin.pedidos.repository.ReciboRepository;
 import pe.edu.ucv.cafetin.pedidos.repository.StockPedidoRepository;
+import pe.edu.ucv.cafetin.pedidos.service.PasarelaPago.ResultadoCobro;
 
 /**
- * Pedidos del estudiante: crear (RF-05), ver (RF-07, RF-08) e historial (RF-09).
+ * Pedidos del estudiante: crear (RF-05), pagar (RF-06, RF-07), cancelar, ver (RF-07, RF-08) e
+ * historial (RF-09).
  * Crear no reserva stock: solo comprueba que alcance; se descuenta al pagar (trigger).
  */
 @Service
@@ -42,11 +49,17 @@ public class PedidoService {
 	private final ReciboRepository recibos;
 	private final StockPedidoRepository stock;
 	private final EstudianteRepository estudiantes;
+	private final TransicionesPedido transiciones;
+	private final PasarelaPago pasarela;
 	private final EntityManager em;
+	private final SecureRandom azar = new SecureRandom();
 
 	public PedidoService(PedidoRepository pedidos, PagoRepository pagos, ReciboRepository recibos,
-			StockPedidoRepository stock, EstudianteRepository estudiantes, EntityManager em) {
+			StockPedidoRepository stock, EstudianteRepository estudiantes, TransicionesPedido transiciones,
+			PasarelaPago pasarela, EntityManager em) {
 		this.pedidos = pedidos;
+		this.transiciones = transiciones;
+		this.pasarela = pasarela;
 		this.pagos = pagos;
 		this.recibos = recibos;
 		this.stock = stock;
@@ -84,6 +97,71 @@ public class PedidoService {
 		em.flush();
 		em.refresh(pedido);
 		return aRespuesta(pedido);
+	}
+
+	/**
+	 * RF-06, RF-07, RF-16. El pago se guarda PENDIENTE y luego pasa a PAGADO: ese UPDATE dispara
+	 * {@code trg_descontar_stock}. Si el stock no alcanza, el CHECK de la base lanza
+	 * {@code DataIntegrityViolationException} (409 STOCK_INSUFICIENTE) y se revierte todo.
+	 * Un rechazo de la pasarela no revierte: el pago queda FALLIDO y el reintento actualiza esa fila.
+	 */
+	@Transactional(noRollbackFor = PagoRechazado.class)
+	public PedidoResponse pagar(Integer idEstudiante, Integer idPedido, MetodoPago metodo) {
+		Pedido pedido = pedidos.paraActualizar(idPedido, idEstudiante)
+				.orElseThrow(() -> new ApiException.NoEncontrado("No existe el pedido " + idPedido));
+		if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
+			throw new ApiException.ReglaNegocio("El pedido está " + pedido.getEstado() + " y no se puede pagar");
+		}
+		Pago pago = pagos.findByPedidoId(idPedido).orElse(null);
+		if (pago != null && pago.getEstado() == EstadoPago.PAGADO) {
+			throw new ApiException.ReglaNegocio("El pedido ya está pagado");
+		}
+
+		// Monto = total que calculó la base, nunca un valor del cliente.
+		if (pago == null) {
+			pago = new Pago(pedido, pedido.getTotal(), metodo);
+		} else {
+			pago.setMonto(pedido.getTotal());
+			pago.setMetodoPago(metodo);
+			pago.setEstado(EstadoPago.PENDIENTE);
+			pago.setReferencia(null);
+		}
+		pago = pagos.saveAndFlush(pago);
+
+		ResultadoCobro cobro = pasarela.cobrar(pedido.getCodigoPedido(), pago.getMonto(), metodo);
+		if (!cobro.aprobado()) {
+			pago.setEstado(EstadoPago.FALLIDO);
+			pagos.saveAndFlush(pago);
+			throw new PagoRechazado(cobro.motivo());
+		}
+
+		pago.setReferencia(cobro.referencia());
+		pago.setEstado(EstadoPago.PAGADO);
+		pagos.saveAndFlush(pago);
+		recibos.saveAndFlush(new Recibo(pago, nuevoCodigoRecibo(pedido)));
+		return aRespuesta(pedido);
+	}
+
+	/** Solo pedidos PENDIENTE sin pagar (decisión del 02/11/2026). */
+	@Transactional
+	public PedidoResponse cancelar(Integer idEstudiante, Integer idPedido) {
+		Pedido pedido = pedidos.paraActualizar(idPedido, idEstudiante)
+				.orElseThrow(() -> new ApiException.NoEncontrado("No existe el pedido " + idPedido));
+		boolean pagado = pagos.findByPedidoId(idPedido).map(p -> p.getEstado() == EstadoPago.PAGADO).orElse(false);
+		transiciones.aplicar(pedido, EstadoPedido.CANCELADO, pagado);
+		return aRespuesta(pedido);
+	}
+
+	/** {@code DR-<nº del pedido>-<4 dígitos>}; se reintenta si el código ya existe (UNIQUE). */
+	private String nuevoCodigoRecibo(Pedido pedido) {
+		String numero = pedido.getCodigoPedido().substring("PED-".length());
+		for (int intento = 0; intento < 10; intento++) {
+			String codigo = "DR-%s-%04d".formatted(numero, azar.nextInt(10_000));
+			if (!recibos.existsByCodigoVerificacion(codigo)) {
+				return codigo;
+			}
+		}
+		throw new IllegalStateException("No se pudo generar un código de recibo único para " + pedido.getCodigoPedido());
 	}
 
 	@Transactional(readOnly = true)
