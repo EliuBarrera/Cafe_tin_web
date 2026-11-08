@@ -274,7 +274,7 @@ class AuthIntegracionTest {
 	@Test
 	void trabajadorEntraADespacho() throws Exception {
 		mvc.perform(get("/api/despacho/pedidos").header(HttpHeaders.AUTHORIZATION, bearer(crearTrabajador())))
-				.andExpect(status().isNotImplemented());
+				.andExpect(status().isOk());
 	}
 
 	@Test
@@ -303,7 +303,7 @@ class AuthIntegracionTest {
 		String dueno = bearer(crearDueno());
 
 		mvc.perform(get("/api/reportes/ventas").header(HttpHeaders.AUTHORIZATION, dueno)).andExpect(status().isNotImplemented());
-		mvc.perform(get("/api/despacho/pedidos").header(HttpHeaders.AUTHORIZATION, dueno)).andExpect(status().isNotImplemented());
+		mvc.perform(get("/api/despacho/pedidos").header(HttpHeaders.AUTHORIZATION, dueno)).andExpect(status().isOk());
 	}
 
 	@Test

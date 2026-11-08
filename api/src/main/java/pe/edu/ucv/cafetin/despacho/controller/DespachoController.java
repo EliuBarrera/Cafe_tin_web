@@ -17,10 +17,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.comun.error.ErrorRespuesta;
+import pe.edu.ucv.cafetin.cuentas.seguridad.UsuarioActual;
 import pe.edu.ucv.cafetin.despacho.dto.DespachoDto.PedidoDespachoResponse;
 import pe.edu.ucv.cafetin.despacho.dto.DespachoDto.VerificarReciboRequest;
+import pe.edu.ucv.cafetin.despacho.service.DespachoService;
 import pe.edu.ucv.cafetin.pedidos.modelo.EstadoPedido;
 
 /**
@@ -33,6 +34,14 @@ import pe.edu.ucv.cafetin.pedidos.modelo.EstadoPedido;
 @Tag(name = "Despacho", description = "Pedidos pagados y su ciclo hasta la entrega (TRABAJADOR y DUENO)")
 public class DespachoController {
 
+	private final DespachoService servicio;
+	private final UsuarioActual usuario;
+
+	public DespachoController(DespachoService servicio, UsuarioActual usuario) {
+		this.servicio = servicio;
+		this.usuario = usuario;
+	}
+
 	@GetMapping
 	@Operation(summary = "Pedidos en curso", description = """
 			TRABAJADOR, DUENO · RF-10. Solo pedidos PAGADOS en PENDIENTE, CONFIRMADO, EN_PREPARACION o LISTO,
@@ -40,7 +49,7 @@ public class DespachoController {
 	public List<PedidoDespachoResponse> listar(
 			@Parameter(description = "Filtrar por un estado; vacío = todos los en curso")
 			@RequestParam(required = false) EstadoPedido estado) {
-		throw new ApiException.NoImplementado("RF-10");
+		return servicio.listar(estado);
 	}
 
 	@PostMapping("/{id}/confirmar")
@@ -48,7 +57,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "Transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse confirmar(@PathVariable Integer id) {
-		throw new ApiException.NoImplementado("RF-11");
+		return servicio.confirmar(usuario.id(), id);
 	}
 
 	@PostMapping("/{id}/preparar")
@@ -56,7 +65,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "Transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse preparar(@PathVariable Integer id) {
-		throw new ApiException.NoImplementado("RF-11");
+		return servicio.preparar(id);
 	}
 
 	@PostMapping("/{id}/listo")
@@ -64,7 +73,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "Transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse listo(@PathVariable Integer id) {
-		throw new ApiException.NoImplementado("RF-12");
+		return servicio.listo(id);
 	}
 
 	@PostMapping("/{id}/verificar")
@@ -72,7 +81,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "El código no coincide o el pedido no está LISTO (REGLA_NEGOCIO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse verificar(@PathVariable Integer id, @Valid @RequestBody VerificarReciboRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-13");
+		return servicio.verificar(id, solicitud.codigoVerificacion());
 	}
 
 	@PostMapping("/{id}/entregar")
@@ -80,7 +89,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "Recibo sin verificar (REGLA_NEGOCIO) o transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse entregar(@PathVariable Integer id) {
-		throw new ApiException.NoImplementado("RF-14");
+		return servicio.entregar(id);
 	}
 
 }

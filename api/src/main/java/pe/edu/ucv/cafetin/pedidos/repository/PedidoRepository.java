@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -31,6 +32,16 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select p from Pedido p where p.id = :id and p.estudiante.id = :idEstudiante")
 	Optional<Pedido> paraActualizar(@Param("id") Integer id, @Param("idEstudiante") Integer idEstudiante);
+
+	/** Pedido bloqueado (SELECT … FOR UPDATE) para el despacho: dos trabajadores no lo mueven a la vez. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select p from Pedido p where p.id = :id")
+	Optional<Pedido> paraDespacho(@Param("id") Integer id);
+
+	/** Pedidos con estudiante, trabajador y detalle cargados en una sola consulta (tablero de despacho). */
+	@EntityGraph(attributePaths = { "estudiante", "trabajador", "detalles", "detalles.producto" })
+	@Query("select distinct p from Pedido p where p.id in :ids")
+	List<Pedido> conDetalle(@Param("ids") Collection<Integer> ids);
 
 	@Query(value = "select p from Pedido p where p.estudiante.id = :idEstudiante order by p.fechaHora desc, p.id desc",
 			countQuery = "select count(p) from Pedido p where p.estudiante.id = :idEstudiante")
