@@ -291,11 +291,11 @@ class AuthIntegracionTest {
 		String dueno = bearer(crearDueno());
 		String nueva = "{\"nombre\": \"Postres\"}";
 
-		mvc.perform(get("/api/categorias").header(HttpHeaders.AUTHORIZATION, estudiante)).andExpect(status().isNotImplemented());
+		mvc.perform(get("/api/categorias").header(HttpHeaders.AUTHORIZATION, estudiante)).andExpect(status().isOk());
 		mvc.perform(post("/api/categorias").header(HttpHeaders.AUTHORIZATION, estudiante)
 				.contentType(MediaType.APPLICATION_JSON).content(nueva)).andExpect(status().isForbidden());
 		mvc.perform(post("/api/categorias").header(HttpHeaders.AUTHORIZATION, dueno)
-				.contentType(MediaType.APPLICATION_JSON).content(nueva)).andExpect(status().isNotImplemented());
+				.contentType(MediaType.APPLICATION_JSON).content(nueva)).andExpect(status().isCreated());
 	}
 
 	@Test

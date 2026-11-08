@@ -61,6 +61,15 @@ public class DatosPrueba {
 				Integer.class, "Cat " + siguiente());
 	}
 
+	public int proveedor() {
+		return jdbc.queryForObject("INSERT INTO proveedor (nombre, telefono) VALUES (?, '044123456') RETURNING id_proveedor",
+				Integer.class, "Proveedor " + siguiente());
+	}
+
+	public void desactivarCategoria(int idCategoria) {
+		jdbc.update("UPDATE categoria SET activo = FALSE WHERE id_categoria = ?", idCategoria);
+	}
+
 	/** Producto activo con su inventario (stock mínimo 5). */
 	public int producto(int idCategoria, String precio, int stock) {
 		Integer id = jdbc.queryForObject("""
