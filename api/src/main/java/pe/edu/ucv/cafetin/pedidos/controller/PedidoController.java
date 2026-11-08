@@ -21,10 +21,12 @@ import jakarta.validation.constraints.Min;
 import pe.edu.ucv.cafetin.comun.dto.Pagina;
 import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.comun.error.ErrorRespuesta;
+import pe.edu.ucv.cafetin.cuentas.seguridad.UsuarioActual;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.CrearPedidoRequest;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.PagarRequest;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.PedidoResponse;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.PedidoResumenResponse;
+import pe.edu.ucv.cafetin.pedidos.service.PedidoService;
 
 /**
  * Pedidos del estudiante autenticado (RF-05 a RF-09). Un estudiante solo ve y opera sus propios
@@ -35,6 +37,14 @@ import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.PedidoResumenResponse;
 @Tag(name = "Pedidos")
 public class PedidoController {
 
+	private final PedidoService servicio;
+	private final UsuarioActual usuario;
+
+	public PedidoController(PedidoService servicio, UsuarioActual usuario) {
+		this.servicio = servicio;
+		this.usuario = usuario;
+	}
+
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	@Operation(summary = "Crear pedido", description = """
@@ -43,7 +53,7 @@ public class PedidoController {
 	@ApiResponse(responseCode = "409", description = "Producto inactivo o sin stock suficiente (STOCK_INSUFICIENTE)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoResponse crear(@Valid @RequestBody CrearPedidoRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-05");
+		return servicio.crear(usuario.id(), solicitud);
 	}
 
 	@PostMapping("/{id}/pago")
@@ -76,7 +86,7 @@ public class PedidoController {
 			ESTUDIANTE (propio) · RF-07, RF-08. Estado, detalle, pago y recibo. La app lo consulta para
 			refrescar el estado si el push no llegó.""")
 	public PedidoResponse obtener(@PathVariable Integer id) {
-		throw new ApiException.NoImplementado("RF-08");
+		return servicio.obtener(usuario.id(), id);
 	}
 
 	@GetMapping("/mios")
@@ -84,7 +94,7 @@ public class PedidoController {
 	public Pagina<PedidoResumenResponse> historial(
 			@RequestParam(defaultValue = "0") @Min(0) int pagina,
 			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int tamano) {
-		throw new ApiException.NoImplementado("RF-09");
+		return servicio.historial(usuario.id(), pagina, tamano);
 	}
 
 }

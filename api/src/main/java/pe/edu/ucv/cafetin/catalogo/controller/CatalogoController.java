@@ -11,13 +11,19 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import pe.edu.ucv.cafetin.catalogo.dto.ProductoCatalogoResponse;
-import pe.edu.ucv.cafetin.comun.error.ApiException;
+import pe.edu.ucv.cafetin.catalogo.service.CatalogoService;
 
 /** Catálogo con disponibilidad en tiempo real (RF-04). Responsable: Eliú Barrera. */
 @RestController
 @RequestMapping("/api/catalogo")
 @Tag(name = "Pedidos", description = "Catálogo, carrito, pago, recibo e historial del estudiante")
 public class CatalogoController {
+
+	private final CatalogoService servicio;
+
+	public CatalogoController(CatalogoService servicio) {
+		this.servicio = servicio;
+	}
 
 	@GetMapping
 	@Operation(summary = "Ver catálogo", description = """
@@ -26,7 +32,7 @@ public class CatalogoController {
 			la pantalla y antes de pagar.""")
 	public List<ProductoCatalogoResponse> listar(
 			@Parameter(description = "Id de categoría para filtrar") @RequestParam(required = false) Integer categoria) {
-		throw new ApiException.NoImplementado("RF-04");
+		return servicio.listar(categoria);
 	}
 
 }

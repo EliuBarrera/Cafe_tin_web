@@ -281,7 +281,7 @@ class AuthIntegracionTest {
 	void estudianteEntraASusPedidosYNoADespacho() throws Exception {
 		String token = bearer(crearEstudiante());
 
-		mvc.perform(get("/api/pedidos/mios").header(HttpHeaders.AUTHORIZATION, token)).andExpect(status().isNotImplemented());
+		mvc.perform(get("/api/pedidos/mios").header(HttpHeaders.AUTHORIZATION, token)).andExpect(status().isOk());
 		mvc.perform(get("/api/despacho/pedidos").header(HttpHeaders.AUTHORIZATION, token)).andExpect(status().isForbidden());
 	}
 

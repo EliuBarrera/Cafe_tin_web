@@ -21,12 +21,12 @@ class MigracionesTest {
 	JdbcTemplate jdbc;
 
 	@Test
-	void flywayAplicaSoloV1EnPerfilTest() {
+	void flywayNoAplicaElSeedV2EnPerfilTest() {
 		var versiones = jdbc.queryForList(
 				// version NULL = fila con la que Flyway registra que creó el esquema
 				"SELECT version FROM cafetin.flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",
 				String.class);
-		assertThat(versiones).containsExactly("1");
+		assertThat(versiones).startsWith("1").contains("10").doesNotContain("2");
 	}
 
 	@Test
