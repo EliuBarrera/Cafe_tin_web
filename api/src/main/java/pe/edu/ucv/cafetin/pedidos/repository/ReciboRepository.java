@@ -10,4 +10,6 @@ public interface ReciboRepository extends JpaRepository<Recibo, Integer> {
 
 	Optional<Recibo> findByPagoId(Integer idPago);
 
+	boolean existsByCodigoVerificacion(String codigoVerificacion);
+
 }

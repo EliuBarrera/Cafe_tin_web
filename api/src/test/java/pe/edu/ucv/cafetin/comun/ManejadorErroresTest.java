@@ -34,10 +34,10 @@ class ManejadorErroresTest {
 
 	@Test
 	void endpointSinImplementarResponde501() throws Exception {
-		mvc.perform(post("/api/pedidos/7/cancelar").with(csrf()))
+		mvc.perform(get("/api/categorias"))
 				.andExpect(status().isNotImplemented())
 				.andExpect(jsonPath("$.codigo").value("NO_IMPLEMENTADO"))
-				.andExpect(jsonPath("$.mensaje").value("Pendiente de implementar (RF-05)"))
+				.andExpect(jsonPath("$.mensaje").value("Pendiente de implementar (RF-04)"))
 				.andExpect(jsonPath("$.detalles").isEmpty());
 	}
 
