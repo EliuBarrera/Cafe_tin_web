@@ -37,6 +37,25 @@ public class DatosPrueba {
 		return id;
 	}
 
+	public int trabajador(String nombre, String apellidos) {
+		int n = siguiente();
+		Integer id = jdbc.queryForObject("""
+				INSERT INTO usuario (nombre, apellidos, correo, contrasena, tipo_usuario)
+				VALUES (?, ?, ?, 'x', 'TRABAJADOR') RETURNING id_usuario""",
+				Integer.class, nombre, apellidos, "trab" + n + "@cafetin.pe");
+		jdbc.update("INSERT INTO trabajador (id_usuario, codigo_empleado, turno) VALUES (?, ?, 'MANANA')", id, "T" + n);
+		return id;
+	}
+
+	public int dueno() {
+		Integer id = jdbc.queryForObject("""
+				INSERT INTO usuario (nombre, apellidos, correo, contrasena, tipo_usuario)
+				VALUES ('Rosa', 'Prueba', ?, 'x', 'DUENO') RETURNING id_usuario""",
+				Integer.class, "dueno" + siguiente() + "@cafetin.pe");
+		jdbc.update("INSERT INTO dueno (id_usuario) VALUES (?)", id);
+		return id;
+	}
+
 	public int categoria() {
 		return jdbc.queryForObject("INSERT INTO categoria (nombre) VALUES (?) RETURNING id_categoria",
 				Integer.class, "Cat " + siguiente());
