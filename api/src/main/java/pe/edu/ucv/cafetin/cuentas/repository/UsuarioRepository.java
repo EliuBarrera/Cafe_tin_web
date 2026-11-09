@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import pe.edu.ucv.cafetin.cuentas.modelo.Usuario;
 
@@ -24,6 +26,16 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 	@Modifying
 	@Query(value = "UPDATE usuario SET fcm_token = NULL WHERE fcm_token = :token AND id_usuario <> :id", nativeQuery = true)
 	void quitarFcmTokenDeOtros(@Param("token") String token, @Param("id") Integer id);
+
+	/**
+	 * Borra un token que el servicio de push rechazó, solo si sigue siendo el mismo: la app pudo haber
+	 * registrado uno nuevo mientras se enviaba el aviso. Se llama después del commit del despacho, por eso
+	 * abre su propia transacción.
+	 */
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Modifying
+	@Query(value = "UPDATE usuario SET fcm_token = NULL WHERE id_usuario = :id AND fcm_token = :token", nativeQuery = true)
+	void quitarFcmToken(@Param("id") Integer id, @Param("token") String token);
 
 	/** La expiración la calcula la base: {@code token_expira} está en hora de Lima, no la de la JVM. */
 	@Modifying

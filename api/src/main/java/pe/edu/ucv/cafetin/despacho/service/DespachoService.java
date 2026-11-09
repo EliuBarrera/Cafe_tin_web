@@ -6,10 +6,12 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import pe.edu.ucv.cafetin.comun.error.ApiException;
+import pe.edu.ucv.cafetin.comun.evento.PedidoEstadoCambiado;
 import pe.edu.ucv.cafetin.comun.modelo.Notificacion;
 import pe.edu.ucv.cafetin.comun.modelo.TipoNotificacion;
 import pe.edu.ucv.cafetin.cuentas.modelo.Usuario;
@@ -44,10 +46,11 @@ public class DespachoService {
 	private final TrabajadorRepository trabajadores;
 	private final NotificacionRepository notificaciones;
 	private final TransicionesPedido transiciones;
+	private final ApplicationEventPublisher eventos;
 
 	public DespachoService(PedidoEnCursoRepository enCurso, PedidoRepository pedidos, PagoRepository pagos,
 			ReciboRepository recibos, TrabajadorRepository trabajadores, NotificacionRepository notificaciones,
-			TransicionesPedido transiciones) {
+			TransicionesPedido transiciones, ApplicationEventPublisher eventos) {
 		this.enCurso = enCurso;
 		this.pedidos = pedidos;
 		this.pagos = pagos;
@@ -55,6 +58,7 @@ public class DespachoService {
 		this.trabajadores = trabajadores;
 		this.notificaciones = notificaciones;
 		this.transiciones = transiciones;
+		this.eventos = eventos;
 	}
 
 	/** RF-10. Solo pagados, por hora de recojo. Un estado que no está en curso devuelve la lista vacía. */
@@ -137,10 +141,11 @@ public class DespachoService {
 		return pagos.findByPedidoId(idPedido).map(p -> p.getEstado() == EstadoPago.PAGADO).orElse(false);
 	}
 
-	/** Fila en {@code notificacion}; el push por FCM llega en la Fase 5. */
+	/** Fila en {@code notificacion} y evento para el push, que {@code cuentas} envía después del commit. */
 	private void notificar(Pedido pedido, TipoNotificacion tipo, String plantilla) {
-		notificaciones.save(new Notificacion(pedido.getEstudiante(), pedido, tipo,
-				plantilla.formatted(pedido.getCodigoPedido())));
+		String mensaje = plantilla.formatted(pedido.getCodigoPedido());
+		notificaciones.save(new Notificacion(pedido.getEstudiante(), pedido, tipo, mensaje));
+		eventos.publishEvent(new PedidoEstadoCambiado(pedido.getEstudiante().getId(), pedido.getId(), tipo, mensaje));
 	}
 
 	private PedidoDespachoResponse aRespuesta(Pedido pedido) {

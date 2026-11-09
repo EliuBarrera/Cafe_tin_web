@@ -31,6 +31,9 @@ contenedor Docker. Lee primero el `CLAUDE.md` raíz (sección "Lo que hace la BD
 - `spring.jpa.hibernate.ddl-auto: validate`, `hibernate.default_schema: cafetin`.
 - Zona horaria: la fija V1 en la base (`America/Lima`). No la cambies en Java.
 - CORS: orígenes desde la variable `CORS_ORIGINS` (localhost del panel y el dominio de Vercel).
+- Push (RF-08): `FIREBASE_CREDENTIALS` = JSON de la cuenta de servicio de Firebase o ruta al archivo
+  (en Render, un *Secret File*). Sin ella, `EnvioPushLog` solo escribe el aviso en el log. No se usa
+  `firebase-admin`: `EnvioPushFcm` llama a la API HTTP v1 con Nimbus y `RestClient`.
 
 ## Código
 
