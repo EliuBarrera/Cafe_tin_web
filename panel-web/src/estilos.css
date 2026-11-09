@@ -692,3 +692,22 @@ a:focus-visible {
   align-self: center;
   font-weight: 600;
 }
+
+/* Categorías y proveedores */
+.confirmacion {
+  display: grid;
+  gap: 0.25rem;
+  max-width: 18rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--error-fondo);
+  border-radius: 8px;
+}
+
+.confirmacion p {
+  margin: 0;
+}
+
+.tabla a {
+  color: var(--acento);
+}

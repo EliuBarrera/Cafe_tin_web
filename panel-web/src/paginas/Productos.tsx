@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useId, useState, type FormEvent, type ReactNode } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 
 import { api } from '../api/cliente'
 import type {
@@ -11,6 +11,7 @@ import type {
   Proveedor,
   StockRecargado,
 } from '../api/tipos'
+import { Campo, opcional } from '../componentes/Formulario'
 import { MensajeError } from '../componentes/MensajeError'
 
 const CLAVE = ['productos'] as const
@@ -224,9 +225,6 @@ function camposDe(p?: Producto): Campos {
   }
 }
 
-/** Texto vacío = campo ausente (la API lo guarda nulo). */
-const opcional = (texto: string) => (texto.trim() === '' ? undefined : texto.trim())
-
 /** Alta (RF-15) o edición (RF-19). En la edición no se toca el stock: eso es la recarga. */
 function FormularioProducto({ producto, alTerminar }: { producto?: Producto; alTerminar: () => void }) {
   const cliente = useQueryClient()
@@ -399,15 +397,6 @@ function FormularioRecarga({
         </button>
       </div>
     </form>
-  )
-}
-
-function Campo({ etiqueta, ancho, children }: { etiqueta: string; ancho?: boolean; children: ReactNode }) {
-  return (
-    <label className={ancho ? 'campo-ancho' : undefined}>
-      {etiqueta}
-      {children}
-    </label>
   )
 }
 
