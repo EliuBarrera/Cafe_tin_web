@@ -2,6 +2,7 @@ package pe.edu.ucv.cafetin.basedatos;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +21,9 @@ class MigracionesTest {
 	@Autowired
 	JdbcTemplate jdbc;
 
+	@Autowired
+	Flyway flyway;
+
 	@Test
 	void flywayNoAplicaElSeedV2EnPerfilTest() {
 		var versiones = jdbc.queryForList(
@@ -27,6 +31,12 @@ class MigracionesTest {
 				"SELECT version FROM cafetin.flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",
 				String.class);
 		assertThat(versiones).startsWith("1").contains("10").doesNotContain("2");
+	}
+
+	@Test
+	void flywayAceptaMigracionesFueraDeOrden() {
+		// Rangos por módulo: una V3 creada después de aplicar la V10 no debe romper el arranque.
+		assertThat(flyway.getConfiguration().isOutOfOrder()).isTrue();
 	}
 
 	@Test

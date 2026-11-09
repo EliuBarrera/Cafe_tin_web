@@ -8,6 +8,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,18 +28,22 @@ public class RecuperacionService {
 	private final SecureRandom azar = new SecureRandom();
 	private final UsuarioRepository usuarios;
 	private final PasswordEncoder encoder;
-	private final EnvioRecuperacion envio;
+	private final ApplicationEventPublisher eventos;
 	private final int minutos;
 
-	public RecuperacionService(UsuarioRepository usuarios, PasswordEncoder encoder, EnvioRecuperacion envio,
+	public RecuperacionService(UsuarioRepository usuarios, PasswordEncoder encoder, ApplicationEventPublisher eventos,
 			@Value("${cafetin.recuperacion.minutos}") int minutos) {
 		this.usuarios = usuarios;
 		this.encoder = encoder;
-		this.envio = envio;
+		this.eventos = eventos;
 		this.minutos = minutos;
 	}
 
-	/** Sin efecto visible si el correo no existe o la cuenta está inactiva: no revela qué cuentas hay. */
+	/**
+	 * Sin efecto visible si el correo no existe o la cuenta está inactiva: no revela qué cuentas hay.
+	 * El enlace lo envía {@link AvisoRecuperacion} después del commit y en otro hilo, así la respuesta
+	 * tarda lo mismo en ambos casos.
+	 */
 	@Transactional
 	public void solicitar(RecuperarRequest solicitud) {
 		usuarios.findByCorreo(ValidacionCuenta.normalizarCorreo(solicitud.correo()))
@@ -46,7 +51,7 @@ public class RecuperacionService {
 				.ifPresent(usuario -> {
 					String token = generarToken();
 					usuarios.guardarTokenRecuperacion(usuario.getId(), hash(token), minutos);
-					envio.enviar(usuario.getCorreo(), token);
+					eventos.publishEvent(new AvisoRecuperacion.Solicitada(usuario.getCorreo(), token));
 				});
 	}
 

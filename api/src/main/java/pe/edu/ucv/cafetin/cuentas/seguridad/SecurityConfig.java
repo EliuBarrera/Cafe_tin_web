@@ -63,6 +63,7 @@ public class SecurityConfig {
 				.authorizeHttpRequests(r -> r
 						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 						.requestMatchers("/api/auth/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll() // Render
 						// springdoc los desactiva en el perfil prod.
 						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll()
 

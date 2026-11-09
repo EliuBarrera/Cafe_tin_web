@@ -3,13 +3,17 @@ package pe.edu.ucv.cafetin.cuentas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +46,9 @@ class RecuperacionIntegracionTest {
 	private static final String CLAVE = "Cafetin2026";
 	private static final String NUEVA = "NuevaClave2026";
 	private static final AtomicInteger SECUENCIA = new AtomicInteger(2000);
+	/** El enlace sale en otro hilo después del commit: se espera hasta este límite a que llegue (o no). */
+	private static final long ESPERA_ENVIO = 3000;
+	private static final long ESPERA_SIN_ENVIO = 300;
 
 	@Autowired
 	MockMvc mvc;
@@ -138,7 +145,7 @@ class RecuperacionIntegracionTest {
 	void correoInexistenteResponde202SinEnviarNada() throws Exception {
 		recuperar("nadie@ucvvirtual.edu.pe").andExpect(status().isAccepted());
 
-		verify(envio, never()).enviar(any(), any());
+		verify(envio, after(ESPERA_SIN_ENVIO).never()).enviar(any(), any());
 	}
 
 	@Test
@@ -149,7 +156,24 @@ class RecuperacionIntegracionTest {
 
 		recuperar(e.getCorreo()).andExpect(status().isAccepted());
 
-		verify(envio, never()).enviar(any(), any());
+		verify(envio, after(ESPERA_SIN_ENVIO).never()).enviar(any(), any());
+	}
+
+	@Test
+	void laRespuestaNoEsperaAlCorreoYNoRevelaSiLaCuentaExiste() throws Exception {
+		Estudiante e = crearEstudiante();
+		doAnswer(invocacion -> {
+			Thread.sleep(2000); // servidor SMTP lento
+			return null;
+		}).when(envio).enviar(any(), any());
+
+		long inicio = System.nanoTime();
+		recuperar(e.getCorreo()).andExpect(status().isAccepted());
+		Duration conCuenta = Duration.ofNanos(System.nanoTime() - inicio);
+
+		// Si la respuesta esperara al correo, tardaría 2 s más que para un correo sin cuenta.
+		assertThat(conCuenta).isLessThan(Duration.ofMillis(1500)); // el envío simulado tarda 2 s
+		verify(envio, timeout(ESPERA_ENVIO)).enviar(eq(e.getCorreo()), any());
 	}
 
 	@Test
@@ -168,7 +192,7 @@ class RecuperacionIntegracionTest {
 	private String pedirToken(Estudiante e) throws Exception {
 		recuperar(e.getCorreo()).andExpect(status().isAccepted());
 		ArgumentCaptor<String> token = ArgumentCaptor.forClass(String.class);
-		verify(envio).enviar(eq(e.getCorreo()), token.capture());
+		verify(envio, timeout(ESPERA_ENVIO)).enviar(eq(e.getCorreo()), token.capture());
 		return token.getValue();
 	}
 

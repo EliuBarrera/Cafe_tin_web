@@ -9,7 +9,7 @@ Actores: **Estudiante** (pide, paga, recoge) · **Trabajador** (despacha) · **D
 ## Estructura del repo
 
 ```
-api/           Spring Boot 4.1 · Java 21 · Maven · PostgreSQL 16 · Flyway
+api/           Spring Boot 4.1 · Java 25 · Maven · PostgreSQL 16 · Flyway
 panel-web/     React 18 + TypeScript (Vite) · React Router · TanStack Query
 app-android/   Kotlin + Jetpack Compose · MVVM · Retrofit · DataStore
 docs/          openapi.yaml (contrato), trazabilidad.md, análisis y diagramas
@@ -136,7 +136,7 @@ Spring Security sin sesión + JWT. Roles `ESTUDIANTE`, `TRABAJADOR`, `DUENO`.
 - `/api/usuarios/me/**` → autenticado · cualquier otra ruta → denegada
 - Id del usuario autenticado: `UsuarioActual.id()` (`cuentas.seguridad`). En tests: `@WithMockUser(username = "4", roles = "ESTUDIANTE")`.
 - `GET /api/pedidos/{id}`: solo el estudiante dueño del pedido; uno ajeno → 404.
-- Token de recuperación de contraseña: se guarda su hash SHA-256, expira a los 30 min y es de un solo uso. La entrega va detrás de `EnvioRecuperacion`.
+- Token de recuperación de contraseña: se guarda su hash SHA-256, expira a los 30 min y es de un solo uso. La entrega va detrás de `EnvioRecuperacion`: por correo (`EnvioRecuperacionCorreo`) si existe `SPRING_MAIL_HOST`; si no, al log y solo en dev.
 - Cada petición con JWT consulta si el usuario sigue activo: uno desactivado recibe 401 de inmediato.
 
 ## Pruebas
@@ -173,6 +173,11 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 02/11/2026 · Sin pago en `EFECTIVO` en la v1: la API acepta YAPE, PLIN y TARJETA · en efectivo el stock no se reservaba y el despacho no veía esos pedidos. Pendiente: actualizar CU-02 del informe.
 - 02/11/2026 · Solo se cancelan pedidos sin pagar; no hay reembolsos en la v1 · evita reponer stock y el flujo `REEMBOLSADO`.
 - 02/11/2026 · JWT con `spring-boot-starter-security-oauth2-resource-server` (HS256, 8 h; `sub` = id, `rol` = tipo) · oficial de Spring, Boot gestiona la versión y evita un filtro propio.
+- 08/11/2026 · Flyway con `out-of-order: true` · con rangos por módulo, una V3 creada después de aplicar la V10 se rechazaría; así se aplica igual. Una migración no debe depender de otra de un rango mayor que aún no esté en `main`.
+- 08/11/2026 · Java 25 (LTS) para la API, en vez de Java 21 · es la LTS más reciente y Spring Boot 4.1 la soporta. Cada integrante necesita un JDK 25 local para `./mvnw verify` (`sudo apt install openjdk-25-jdk` en Ubuntu 24.04); el CI y el `Dockerfile` usan Temurin 25.
+- 08/11/2026 · Health check con `spring-boot-starter-actuator`: solo `/actuator/health`, público y sin detalles; Render usa `/actuator/health/liveness` · RNF-06; liveness no consulta la base, así Neon puede suspenderse y no se gasta la cuota.
+- 08/11/2026 · Recuperación de contraseña por correo con `spring-boot-starter-mail` (SMTP de Gmail en Render) · sin un envío real, RF-03 no funcionaba en producción. Sin `SPRING_MAIL_HOST` se usa el log, solo en dev.
+- 08/11/2026 · Push por la API HTTP v1 de FCM sin `firebase-admin` (JWT RS256 con Nimbus y `RestClient`) · el SDK suma decenas de librerías y memoria en el plan de 512 MB de Render; Nimbus ya viene con la seguridad.
 
 ## Qué no hacer
 

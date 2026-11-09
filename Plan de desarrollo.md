@@ -76,7 +76,7 @@ gestion-cafetin/
 ├── .env.example               variables: conexión a Neon, JWT, CORS (sin secretos reales)
 ├── .github/workflows/api.yml  CI: ./mvnw verify en cada PR
 ├── docs/                      análisis, diagramas, openapi.yaml, matriz de trazabilidad
-├── api/                       Spring Boot 4.1 · Java 21 · Maven
+├── api/                       Spring Boot 4.1 · Java 25 · Maven
 │   ├── CLAUDE.md              reglas del backend
 │   └── src/main/resources/db/migration/   V1 esquema, V2 datos, V3…
 ├── panel-web/                 React 18 + TypeScript (Vite)
@@ -169,7 +169,7 @@ Así cada responsable puede explicar un flujo completo en la sustentación, la m
 1. `docs/openapi.yaml` congelado: los clientes trabajan contra el contrato aunque el endpoint devuelva 501.
 2. Entidades compartidas: cualquier cambio después de la Fase 1 va en un PR que revisa el dueño del módulo afectado.
 3. `SecurityConfig` y `application.yml` son de Lizca; los demás piden sus reglas por PR.
-4. Migraciones con números reservados: Lizca `V3`–`V9`, Eliú `V10`–`V19`, Maria `V20`–`V29`. Dos `V3` en ramas distintas rompen Flyway.
+4. Migraciones con números reservados: Lizca `V3`–`V9`, Eliú `V10`–`V19`, Maria `V20`–`V29`. Dos `V3` en ramas distintas rompen Flyway. Como una versión menor puede llegar después de una mayor (V3 tras V10), Flyway corre con `out-of-order: true` (decidido el 08/11).
 5. Evento `PedidoEstadoCambiado` en `comun`: lo publica Eliú y lo consume Lizca.
 6. Formato de error `{codigo, mensaje, detalles}` y `@RestControllerAdvice` en `comun`: se crean en la Fase 1 y no los cambia cada módulo.
 7. El seed (`V2`) es la fuente de datos común: corregirlo primero (punto 19 del Análisis).
@@ -228,7 +228,7 @@ Hecho cuando: cada integrante tiene su rama en Neon y su `.env` local, y conecta
 
 Al cerrar Diseño, la API arranca contra PostgreSQL con las 14 entidades validadas por Hibernate (`ddl-auto: validate`) y el contrato OpenAPI queda congelado para que app y panel empiecen en paralelo.
 
-- [x] Proyecto Spring Boot 4.1 (Java 21) con Web, Data JPA, Validation, Security, driver PostgreSQL, Flyway, springdoc-openapi y Testcontainers.
+- [x] Proyecto Spring Boot 4.1 (Java 25) con Web, Data JPA, Validation, Security, driver PostgreSQL, Flyway, springdoc-openapi y Testcontainers.
 - [x] `application.yml` con perfiles `dev`, `test` y `prod`: `ddl-auto: validate`, `default_schema: cafetin`, `stringtype=unspecified` y `currentSchema=cafetin` en cada conexión; V2 (datos de prueba) solo en `dev`. **PR 1.**
 - [x] Paquetes por módulo (con `package-info.java`; las capas se crean al implementar) y, dentro de cada uno, capas `controller` / `service` / `repository` / `dto`: `cuentas`, `catalogo`, `pedidos`, `despacho`, `inventario`, `reportes`, `comun`. Así se ven los cinco paquetes del análisis y la arquitectura en capas que hay que sustentar.
 - [x] **PR 2.** Entidades (en `<modulo>.modelo`): `Usuario` abstracta (JOINED, discriminador `tipo_usuario`) con `Estudiante`, `Trabajador`, `Dueno`; `Notificacion` (JOINED) con `AlertaStock`; `Categoria`, `Proveedor`, `Producto`, `Inventario` (1:1), `Pedido`, `DetallePedido`, `Pago` (1:1), `Recibo` (1:1).
@@ -358,11 +358,12 @@ El estudiante recibe un push cuando su pedido pasa a confirmado, listo o entrega
 - [ ] Proyecto en Firebase. `google-services.json` en la app y la credencial de servicio del Admin SDK en el backend como variable de entorno, nunca en el repo.
 - [x] `usuario.fcm_token` ya está en V1: no hace falta migración.
 - [ ] App: registrar el token tras el login (`PUT /api/usuarios/me/fcm-token`) y pedir el permiso de notificaciones en Android 13 o superior.
-- [ ] API: `NotificacionService` guarda en `notificacion` y envía por FCM después del commit (`@TransactionalEventListener(phase = AFTER_COMMIT)`), así no se notifica un cambio revertido y el pago sigue por debajo de 5 s (RNF-02).
+- [x] API: el despacho guarda la fila en `notificacion` y publica `PedidoEstadoCambiado` (`comun.evento`); `NotificacionPush` lo envía después del commit (`@TransactionalEventListener`, `AFTER_COMMIT`), así no se notifica un cambio revertido. El envío va detrás de `EnvioPush`: hoy `EnvioPushLog` lo escribe en el log.
+- [x] `EnvioPushFcm`: API HTTP v1 de FCM sin el SDK de Firebase (JWT RS256 firmado con Nimbus y token OAuth de Google en caché). Se activa con `FIREBASE_CREDENTIALS`; si FCM responde `UNREGISTERED`, se borra el token del usuario. `EnvioPushFcmTest` simula Google y FCM con un servidor local.
 - [ ] Panel: contador de alertas de stock para el dueño (polling).
 - [ ] Respaldo si FCM se retrasa: la app consulta sus notificaciones de la tabla al abrirse.
 - [ ] Opcional si sobra tiempo: SSE en `/api/despacho/stream` para reemplazar el polling del panel.
-- [ ] Tests: un cambio de estado crea la notificación y llama al cliente FCM (simulado en tests).
+- [x] Tests: un cambio de estado crea la notificación y llama al cliente FCM (simulado en tests). `PushEstadoPedidoIntegracionTest`: sin token o con 409 no hay push; si falla el envío, el despacho sigue.
 
 Hecho cuando: en un dispositivo físico llega el push "Tu pedido está listo" al marcarlo desde el panel.
 
@@ -380,9 +381,9 @@ Las pruebas no esperan al final: cada fase entrega sus tests y esta fase consoli
 | Carga | k6 o JMeter | RNF-02 y RNF-03: pedidos simultáneos de hora punta, confirmación por debajo de 5 s |
 | Aceptación | Lista de RF con evidencia | Recorrido por rol con los datos del seed |
 
-- [ ] Matriz de trazabilidad en `docs/`: RF-01…RF-22 y RNF-01…RNF-08 → casos de prueba → resultado.
+- [x] Matriz de trazabilidad en `docs/`: RF-01…RF-22 y RNF-01…RNF-08 → casos de prueba → resultado. `docs/trazabilidad.md` (08/11): se actualiza en cada PR que agregue un RF o un test.
 - [ ] Umbral de cobertura en servicios acordado por el equipo (JaCoCo) y verificado en CI.
-- [ ] Prueba de carga del flujo crear + pagar, con el objetivo del informe: ≈100 pedidos por hora en hora punta (4 trabajadores), cada confirmación por debajo de 5 s.
+- [x] Prueba de carga del flujo crear + pagar, con el objetivo del informe: ≈100 pedidos por hora en hora punta (4 trabajadores), cada confirmación por debajo de 5 s. `pruebas/carga/pedido-y-pago.js` (k6 en Docker): en local, p95 de 35–72 ms, 0 % de errores y stock nunca negativo. Falta repetirla contra Render.
 - [ ] Pruebas exploratorias en un teléfono real y registro de defectos como issues de GitHub.
 
 Prompt sugerido:
@@ -400,12 +401,12 @@ Hecho cuando: cada RF tiene al menos un caso con resultado registrado y los RNF 
 Se publica una versión estable para la demo: base de datos en Neon (rama `main`), API en Render, panel en Vercel y app como APK firmado. Los tres dan HTTPS (RNF-04).
 
 - [ ] `Dockerfile` multietapa para la API; `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `CORS_ORIGINS` y la credencial de Firebase por variables de entorno.
-- [ ] **Render**: *New* → *Web Service* desde el repo de GitHub, *Root Directory* `api`, entorno *Docker*, región **Ohio**, perfil `prod`, variables de entorno con la conexión **directa** a la rama `main` de Neon, *Health Check Path* `/actuator/health`. Revisar las condiciones del plan gratuito al desplegar: si el servicio se duerme sin tráfico, el primer arranque de la JVM tarda.
+- [ ] **Render**: *New* → *Web Service* desde el repo de GitHub, *Root Directory* `api`, entorno *Docker*, región **Ohio**, perfil `prod`, variables de entorno con la conexión **directa** a la rama `main` de Neon, *Health Check Path* `/actuator/health/liveness` (ver `docs/despliegue.md`). Revisar las condiciones del plan gratuito al desplegar: si el servicio se duerme sin tráfico, el primer arranque de la JVM tarda.
 - [ ] **Vercel**: *Add New* → *Project* desde el repo, *Root Directory* `panel-web`, framework Vite, variable `VITE_API_URL` con la URL de Render, `vercel.json` con rewrite a `/index.html`. Agregar el dominio de Vercel a `CORS_ORIGINS` en Render.
 - [ ] **Neon**: la API en `prod` aplica solo las migraciones del esquema (sin V2) sobre la rama `main`.
 - [ ] App: APK de release firmado con la URL de producción, distribuido directamente (sin Play Store).
-- [ ] RNF-06: health check con Spring Boot Actuator y reinicio automático del contenedor. El 99 % de disponibilidad no se puede demostrar en dos semanas; se documenta cómo se mediría.
-- [ ] Datos de demo: dueño, dos trabajadores, varios estudiantes y un catálogo realista; V2 no se aplica en producción salvo para la demo.
+- [x] RNF-06: health check con Spring Boot Actuator (`/actuator/health/liveness`, público y sin detalles; `HealthCheckIntegracionTest`). Pendiente al desplegar: confirmar el reinicio automático del contenedor. El 99 % de disponibilidad no se puede demostrar en dos semanas; se documenta cómo se mediría.
+- [ ] Datos de demo: dueño, dos trabajadores, varios estudiantes y un catálogo realista; V2 no se aplica en producción salvo para la demo. El primer dueño de producción se crea con `api/scripts/hash-contrasena.sh` y el SQL de `docs/despliegue.md`.
 - [ ] Manual de usuario por rol y README técnico por módulo (Claude Code puede redactar el borrador a partir del código; el equipo lo revisa).
 - [ ] Ensayo completo de la demo y tag `v1.0`.
 
@@ -454,7 +455,7 @@ El riesgo mayor es el calendario: cuatro semanas para tres clientes. Lo que más
 | Firebase se retrasa | Sin token registrado al 30/11 | Notificaciones también en tabla y consultadas por la app al abrirse |
 | Secretos en el repositorio | Claves en un diff | `.env` fuera de Git, `.env.example` sin valores reales, revisar los diffs antes de cada commit |
 | Despliegue de última hora | Nada desplegado al 04/12 | Desplegar una versión temprana al cerrar la Fase 3 |
-| Arranque en frío en la demo | La primera petición tarda varios segundos (Render dormido o Neon suspendido) | Abrir la app y el panel unos minutos antes de la demo para despertar la API y la base; si no alcanza, un plan pago de Render solo para el mes de la demo |
+| Arranque en frío en la demo | Render dormido: con 0,1 CPU la JVM tardaba más de 5 min en arrancar (medido con Docker); Neon suspendido suma ~1 s | `api/Dockerfile` con caché AOT de Java 25 y solo el compilador C1: ~2 min 20 s con 0,1 CPU y 22 s con 0,5 CPU (09/11). Además, abrir la app y el panel unos minutos antes de la demo; si no alcanza, un plan pago de Render solo para el mes de la demo |
 | Límites del plan gratuito | Neon o Render avisan de cuota agotada | Revisar el uso cada semana en sus paneles; los tests usan Testcontainers, no Neon, para no gastar cuota |
 
 ## Referencias
