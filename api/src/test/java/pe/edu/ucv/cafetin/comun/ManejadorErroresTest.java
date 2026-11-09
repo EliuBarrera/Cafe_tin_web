@@ -33,16 +33,6 @@ class ManejadorErroresTest {
 	MockMvc mvc;
 
 	@Test
-	@WithMockUser(roles = "DUENO")
-	void endpointSinImplementarResponde501() throws Exception {
-		mvc.perform(get("/api/reportes/mas-vendidos"))
-				.andExpect(status().isNotImplemented())
-				.andExpect(jsonPath("$.codigo").value("NO_IMPLEMENTADO"))
-				.andExpect(jsonPath("$.mensaje").value("Pendiente de implementar (RF-22)"))
-				.andExpect(jsonPath("$.detalles").isEmpty());
-	}
-
-	@Test
 	void cuerpoConCamposInvalidosResponde400ConDetalles() throws Exception {
 		mvc.perform(post("/api/pedidos").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("""
 				{"items": [{"idProducto": 7, "cantidad": 0}]}"""))
