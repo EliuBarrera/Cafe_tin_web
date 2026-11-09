@@ -455,7 +455,7 @@ El riesgo mayor es el calendario: cuatro semanas para tres clientes. Lo que más
 | Firebase se retrasa | Sin token registrado al 30/11 | Notificaciones también en tabla y consultadas por la app al abrirse |
 | Secretos en el repositorio | Claves en un diff | `.env` fuera de Git, `.env.example` sin valores reales, revisar los diffs antes de cada commit |
 | Despliegue de última hora | Nada desplegado al 04/12 | Desplegar una versión temprana al cerrar la Fase 3 |
-| Arranque en frío en la demo | La primera petición tarda varios segundos (Render dormido o Neon suspendido) | Abrir la app y el panel unos minutos antes de la demo para despertar la API y la base; si no alcanza, un plan pago de Render solo para el mes de la demo |
+| Arranque en frío en la demo | Render dormido: con 0,1 CPU la JVM tardaba más de 5 min en arrancar (medido con Docker); Neon suspendido suma ~1 s | `api/Dockerfile` con caché AOT de Java 25 y solo el compilador C1: ~2 min 20 s con 0,1 CPU y 22 s con 0,5 CPU (09/11). Además, abrir la app y el panel unos minutos antes de la demo; si no alcanza, un plan pago de Render solo para el mes de la demo |
 | Límites del plan gratuito | Neon o Render avisan de cuota agotada | Revisar el uso cada semana en sus paneles; los tests usan Testcontainers, no Neon, para no gastar cuota |
 
 ## Referencias

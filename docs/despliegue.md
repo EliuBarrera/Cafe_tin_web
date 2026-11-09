@@ -63,6 +63,12 @@ a propósito: Render lo llama cada pocos segundos y, si tocara Neon, la base nun
 gastaría la cuota gratuita. `/actuator/health` (sin `/liveness`) sí revisa la conexión a Neon: sirve para
 diagnosticar a mano, no para Render.
 
+**Arranque en frío:** el plan gratuito apaga la API sin tráfico y la despierta con la siguiente
+petición. Con 0,1 CPU la JVM tarda: la imagen trae un caché AOT de Java 25 y usa solo el compilador C1
+para acortarlo (medido con Docker: más de 5 min → ~2 min 20 s). Si el log dice "Aviso: el caché AOT no
+carga", la API arranca igual pero más lenta; revisa que nadie haya cambiado `JAVA_OPCIONES`. Antes de
+la demo, abre el panel unos minutos antes para despertarla.
+
 Al primer arranque, Flyway crea el esquema `cafetin` en Neon `main` con las migraciones de
 `db/migration` (V1, V10…). El perfil `prod` **no** carga los datos de prueba (V2): la base queda vacía.
 

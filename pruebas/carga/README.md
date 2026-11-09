@@ -64,6 +64,7 @@ Local: laptop de 8 núcleos y 8 GB de RAM, Java 25, PostgreSQL 16 en Docker, 40 
 |---|---|---|---|---|
 | Stock del seed (165 unidades) | 165 | 72 ms | 0 % | Stock 0, ningún producto negativo, una fila de `pago` por pedido, una sola alerta `STOCK_AGOTADO` por producto |
 | Stock alto (carga sostenida) | 1628 en ~2 min (≈ 14,7/s) | 35 ms | 0 % | Unidades descontadas = pagos (1628) |
+| Imagen de `api/Dockerfile` (solo C1, contenedor de 1 CPU y 512 MB), 09/11 | 1614 en ~2 min | 69 ms | 0 % | Ningún stock negativo |
 
 RNF-02 y RNF-03 se cumplen con amplio margen en local. Falta repetirla contra Render con una rama de
 Neon de prueba (no `main`) para tener el dato del despliegue real.
