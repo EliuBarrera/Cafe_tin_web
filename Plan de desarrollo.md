@@ -206,7 +206,7 @@ Al terminar, cualquiera del equipo clona el repo, se conecta a su propia rama de
 - [ ] Crear el proyecto en Neon, una rama por persona e invitar al equipo (ver "Configurar Neon").
 - [x] Convertir `01_gestion_cafetin_schema.sql` en `V1__esquema.sql` sin `DROP SCHEMA`, `CREATE SCHEMA` ni `SET search_path` (Flyway crea el esquema; si el script lo borra, borra también el historial de migraciones). `02_gestion_cafetin_datos.sql` pasa a `V2__datos_prueba.sql` con las correcciones del punto 19 del Análisis. Las correcciones de esquema decididas (puntos 7, 9 y 17) van directo en `V1`.
 - [x] Mover `Documentación/` a `docs/` para que coincida con `CLAUDE.md`.
-- [ ] Cerrar las decisiones del Resumen y escribirlas en `CLAUDE.md`. Cerradas el 02/11: `fcm_token`, producto agotado, alertas, infraestructura (Neon, Render, Vercel) y panel en React. Faltan: pasarela, tiempo real, efectivo y cancelación.
+- [x] Cerrar las decisiones del Resumen y escribirlas en `CLAUDE.md`. Cerradas el 02/11: `fcm_token`, producto agotado, alertas, infraestructura (Neon, Render, Vercel), panel en React, pasarela, tiempo real, efectivo y cancelación.
 - [x] Workflow de GitHub Actions que ejecuta `./mvnw verify` en `api/` en cada PR (se omite mientras no exista `api/pom.xml`).
 - [ ] Docker instalado en cada equipo: lo necesitan los tests (Testcontainers), aunque la base de desarrollo esté en Neon.
 
@@ -290,25 +290,25 @@ Es el núcleo del sistema: al terminar, un estudiante pide y paga desde la app y
 
 **API**
 
-- [ ] Catálogo (`GET /api/catalogo`) desde `v_catalogo_disponible`, con filtro por categoría.
-- [ ] Crear pedido: valida stock por ítem, copia el precio a `precio_unitario`, genera `codigo_pedido`, deja que el trigger calcule el total y refresca el pedido.
-- [ ] Pagar: interfaz `PasarelaPago` con `PasarelaSimulada`; `INSERT` pago `PENDIENTE` → pasarela → `UPDATE` a `PAGADO` (descuenta stock) → crea `Recibo` con código de verificación. Si la BD rechaza por stock → 409 y se revierte la transacción.
-- [ ] Máquina de estados en una sola clase: `PENDIENTE` (pagado) → `CONFIRMADO` → `EN_PREPARACION` → `LISTO` → `ENTREGADO`; `CANCELADO` solo desde `PENDIENTE`. Cualquier otra transición → 409.
-- [ ] Despacho: lista desde `v_pedidos_en_curso` filtrando pagados; confirmar (asigna `id_trabajador`), preparar, listo, verificar código del recibo, entregar (exige recibo verificado).
-- [ ] Historial del estudiante y detalle del pedido con estado y recibo.
-- [ ] Cada cambio de estado registra una fila en `notificacion`; el push llega en la Fase 5.
+- [x] Catálogo (`GET /api/catalogo`) desde `v_catalogo_disponible`, con filtro por categoría.
+- [x] Crear pedido: valida stock por ítem, copia el precio a `precio_unitario`, genera `codigo_pedido`, deja que el trigger calcule el total y refresca el pedido.
+- [x] Pagar: interfaz `PasarelaPago` con `PasarelaSimulada`; `INSERT` pago `PENDIENTE` → pasarela → `UPDATE` a `PAGADO` (descuenta stock) → crea `Recibo` con código de verificación. Si la BD rechaza por stock → 409 y se revierte la transacción.
+- [x] Máquina de estados en una sola clase: `PENDIENTE` (pagado) → `CONFIRMADO` → `EN_PREPARACION` → `LISTO` → `ENTREGADO`; `CANCELADO` solo desde `PENDIENTE`. Cualquier otra transición → 409.
+- [x] Despacho: lista desde `v_pedidos_en_curso` filtrando pagados; confirmar (asigna `id_trabajador`), preparar, listo, verificar código del recibo, entregar (exige recibo verificado).
+- [x] Historial del estudiante y detalle del pedido con estado y recibo.
+- [x] Cada cambio de estado registra una fila en `notificacion`; el push llega en la Fase 5.
 
 **Pruebas clave (Testcontainers)**
 
-- [ ] Pedido de 2 productos → total correcto.
-- [ ] Pago aprobado → baja el stock y se crea el recibo.
-- [ ] Dos pagos concurrentes por la última unidad → uno pasa, el otro recibe 409 (RNF-03).
-- [ ] Transición inválida (`LISTO` → `CONFIRMADO`) → 409.
-- [ ] Entregar sin recibo verificado → 409.
-- [ ] Pago rechazado y reintento con otro método → un solo registro en `pago`, termina `PAGADO`.
-- [ ] `pago.monto` igual a `pedido.total`.
-- [ ] Cancelación según lo decidido (sin pagar, o pagado con reembolso y stock repuesto).
-- [ ] Estudiante que consulta un pedido ajeno → 403 o 404.
+- [x] Pedido de 2 productos → total correcto.
+- [x] Pago aprobado → baja el stock y se crea el recibo.
+- [x] Dos pagos concurrentes por la última unidad → uno pasa, el otro recibe 409 (RNF-03).
+- [x] Transición inválida (`LISTO` → `CONFIRMADO`) → 409.
+- [x] Entregar sin recibo verificado → 409.
+- [x] Pago rechazado y reintento con otro método → un solo registro en `pago`, termina `PAGADO`.
+- [x] `pago.monto` igual a `pedido.total`.
+- [x] Cancelación según lo decidido (sin pagar, o pagado con reembolso y stock repuesto).
+- [x] Estudiante que consulta un pedido ajeno → 403 o 404.
 
 **App Android:** catálogo con estado de stock, carrito, hora de recojo, pago (método), pantalla de recibo con el código grande, historial.
 
@@ -331,13 +331,13 @@ El dueño gestiona productos y stock desde el panel, ve las alertas que generan 
 
 **API**
 
-- [ ] Alta de producto con su inventario inicial en la misma transacción (RF-15); editar y deshabilitar (RF-19); CRUD de categorías y proveedores.
-- [ ] Recarga de stock (RF-18) según lo decidido sobre `activo` (Análisis, punto 7).
-- [ ] Alertas: lista desde `alerta_stock` y `v_alertas_reposicion` con el teléfono del proveedor; marcar como atendida.
-- [ ] Ingresos (RF-21): por día desde `v_ingresos_diarios`; semana y mes agrupando con `date_trunc`.
-- [ ] Más vendidos (RF-22) desde `v_productos_mas_vendidos`. La vista no tiene fecha: si se pide filtrar por periodo, hace falta una consulta propia.
-- [ ] Historial de ventas (RF-20): los pagos en `PAGADO` ya son el registro de cada venta.
-- [ ] Tests: una venta que baja del mínimo genera alerta; la recarga actualiza la fecha; estudiante y trabajador → 403 en `/api/inventario/**` y `/api/reportes/**`.
+- [x] Alta de producto con su inventario inicial en la misma transacción (RF-15); editar y deshabilitar (RF-19); CRUD de categorías y proveedores.
+- [x] Recarga de stock (RF-18) según lo decidido sobre `activo` (Análisis, punto 7).
+- [x] Alertas: lista desde `alerta_stock` y `v_alertas_reposicion` con el teléfono del proveedor; marcar como atendida.
+- [x] Ingresos (RF-21): por día desde `v_ingresos_diarios`; semana y mes agrupando con `date_trunc`.
+- [x] Más vendidos (RF-22) desde `v_productos_mas_vendidos`. La vista no tiene fecha: si se pide filtrar por periodo, hace falta una consulta propia.
+- [x] Historial de ventas (RF-20): los pagos en `PAGADO` ya son el registro de cada venta.
+- [x] Tests: una venta que baja del mínimo genera alerta; la recarga actualiza la fecha; estudiante y trabajador → 403 en `/api/inventario/**` y `/api/reportes/**`.
 
 **Panel web:** productos (tabla y formulario), inventario con nivel frente al mínimo, alertas con contacto del proveedor, reportes con gráfico por día, semana o mes y ranking de productos.
 
@@ -360,7 +360,7 @@ El estudiante recibe un push cuando su pedido pasa a confirmado, listo o entrega
 - [ ] App: registrar el token tras el login (`PUT /api/usuarios/me/fcm-token`) y pedir el permiso de notificaciones en Android 13 o superior.
 - [x] API: el despacho guarda la fila en `notificacion` y publica `PedidoEstadoCambiado` (`comun.evento`); `NotificacionPush` lo envía después del commit (`@TransactionalEventListener`, `AFTER_COMMIT`), así no se notifica un cambio revertido. El envío va detrás de `EnvioPush`: hoy `EnvioPushLog` lo escribe en el log.
 - [x] `EnvioPushFcm`: API HTTP v1 de FCM sin el SDK de Firebase (JWT RS256 firmado con Nimbus y token OAuth de Google en caché). Se activa con `FIREBASE_CREDENTIALS`; si FCM responde `UNREGISTERED`, se borra el token del usuario. `EnvioPushFcmTest` simula Google y FCM con un servidor local.
-- [ ] Panel: contador de alertas de stock para el dueño (polling).
+- [x] Panel: contador de alertas de stock para el dueño (polling). `ContadorAlertas` (PR #19).
 - [ ] Respaldo si FCM se retrasa: la app consulta sus notificaciones de la tabla al abrirse.
 - [ ] Opcional si sobra tiempo: SSE en `/api/despacho/stream` para reemplazar el polling del panel.
 - [x] Tests: un cambio de estado crea la notificación y llama al cliente FCM (simulado en tests). `PushEstadoPedidoIntegracionTest`: sin token o con 409 no hay push; si falla el envío, el despacho sigue.
