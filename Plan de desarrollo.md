@@ -358,11 +358,12 @@ El estudiante recibe un push cuando su pedido pasa a confirmado, listo o entrega
 - [ ] Proyecto en Firebase. `google-services.json` en la app y la credencial de servicio del Admin SDK en el backend como variable de entorno, nunca en el repo.
 - [x] `usuario.fcm_token` ya está en V1: no hace falta migración.
 - [ ] App: registrar el token tras el login (`PUT /api/usuarios/me/fcm-token`) y pedir el permiso de notificaciones en Android 13 o superior.
-- [ ] API: `NotificacionService` guarda en `notificacion` y envía por FCM después del commit (`@TransactionalEventListener(phase = AFTER_COMMIT)`), así no se notifica un cambio revertido y el pago sigue por debajo de 5 s (RNF-02).
+- [x] API: el despacho guarda la fila en `notificacion` y publica `PedidoEstadoCambiado` (`comun.evento`); `NotificacionPush` lo envía después del commit (`@TransactionalEventListener`, `AFTER_COMMIT`), así no se notifica un cambio revertido. El envío va detrás de `EnvioPush`: hoy `EnvioPushLog` lo escribe en el log.
+- [ ] Implementación de `EnvioPush` con Firebase Admin SDK (falta el proyecto de Firebase y aprobar la dependencia `firebase-admin`).
 - [ ] Panel: contador de alertas de stock para el dueño (polling).
 - [ ] Respaldo si FCM se retrasa: la app consulta sus notificaciones de la tabla al abrirse.
 - [ ] Opcional si sobra tiempo: SSE en `/api/despacho/stream` para reemplazar el polling del panel.
-- [ ] Tests: un cambio de estado crea la notificación y llama al cliente FCM (simulado en tests).
+- [x] Tests: un cambio de estado crea la notificación y llama al cliente FCM (simulado en tests). `PushEstadoPedidoIntegracionTest`: sin token o con 409 no hay push; si falla el envío, el despacho sigue.
 
 Hecho cuando: en un dispositivo físico llega el push "Tu pedido está listo" al marcarlo desde el panel.
 
