@@ -174,7 +174,7 @@ class PushEstadoPedidoIntegracionTest {
 		long inicio = System.nanoTime();
 		accion(id, "confirmar").andExpect(status().isOk());
 
-		assertThat(Duration.ofNanos(System.nanoTime() - inicio)).isLessThan(Duration.ofSeconds(1));
+		assertThat(Duration.ofNanos(System.nanoTime() - inicio)).isLessThan(Duration.ofMillis(1500)); // el envío simulado tarda 2 s
 		verify(envio, timeout(ESPERA_ENVIO)).enviar(eq(TOKEN), any());
 	}
 

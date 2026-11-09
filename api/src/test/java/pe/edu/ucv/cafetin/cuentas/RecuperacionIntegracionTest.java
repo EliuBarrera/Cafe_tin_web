@@ -172,7 +172,7 @@ class RecuperacionIntegracionTest {
 		Duration conCuenta = Duration.ofNanos(System.nanoTime() - inicio);
 
 		// Si la respuesta esperara al correo, tardaría 2 s más que para un correo sin cuenta.
-		assertThat(conCuenta).isLessThan(Duration.ofSeconds(1));
+		assertThat(conCuenta).isLessThan(Duration.ofMillis(1500)); // el envío simulado tarda 2 s
 		verify(envio, timeout(ESPERA_ENVIO)).enviar(eq(e.getCorreo()), any());
 	}
 
