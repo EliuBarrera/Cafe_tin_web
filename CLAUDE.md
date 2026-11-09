@@ -136,7 +136,7 @@ Spring Security sin sesión + JWT. Roles `ESTUDIANTE`, `TRABAJADOR`, `DUENO`.
 - `/api/usuarios/me/**` → autenticado · cualquier otra ruta → denegada
 - Id del usuario autenticado: `UsuarioActual.id()` (`cuentas.seguridad`). En tests: `@WithMockUser(username = "4", roles = "ESTUDIANTE")`.
 - `GET /api/pedidos/{id}`: solo el estudiante dueño del pedido; uno ajeno → 404.
-- Token de recuperación de contraseña: se guarda su hash SHA-256, expira a los 30 min y es de un solo uso. La entrega va detrás de `EnvioRecuperacion`.
+- Token de recuperación de contraseña: se guarda su hash SHA-256, expira a los 30 min y es de un solo uso. La entrega va detrás de `EnvioRecuperacion`: por correo (`EnvioRecuperacionCorreo`) si existe `SPRING_MAIL_HOST`; si no, al log y solo en dev.
 - Cada petición con JWT consulta si el usuario sigue activo: uno desactivado recibe 401 de inmediato.
 
 ## Pruebas
