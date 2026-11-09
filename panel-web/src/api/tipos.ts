@@ -27,6 +27,11 @@ export type Proveedor = Required<Omit<Esquemas['ProveedorResponse'], 'correo' | 
   direccion: string | null
 }
 
+// Trabajadores (RF-02): el dueño los registra y los activa o desactiva; no se editan.
+export type Trabajador = Required<Omit<Esquemas['TrabajadorResponse'], 'telefono'>> & { telefono: string | null }
+export type Turno = Trabajador['turno']
+export type TrabajadorAlta = Esquemas['TrabajadorRequest']
+
 // Ingresos del dueño (RF-20 a RF-22). Solo cuentan pagos PAGADO.
 export type Periodo = 'DIA' | 'SEMANA' | 'MES'
 export type IngresoPeriodo = Required<Esquemas['IngresoPeriodoResponse']>
