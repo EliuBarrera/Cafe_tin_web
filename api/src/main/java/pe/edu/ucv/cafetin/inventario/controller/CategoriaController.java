@@ -17,42 +17,48 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import pe.edu.ucv.cafetin.comun.dto.EstadoRequest;
-import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.CategoriaRequest;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.CategoriaResponse;
+import pe.edu.ucv.cafetin.inventario.service.CategoriaProveedorService;
 
 /**
  * Categorías: lectura para todos (filtro del catálogo, RF-04); escritura solo DUENO (RF-15).
- * Responsable: Maria Elizabeth Ruiz.
+ * Responsable: Eliú Barrera.
  */
 @RestController
 @RequestMapping("/api/categorias")
 @Tag(name = "Inventario")
 public class CategoriaController {
 
+	private final CategoriaProveedorService servicio;
+
+	public CategoriaController(CategoriaProveedorService servicio) {
+		this.servicio = servicio;
+	}
+
 	@GetMapping
 	@Operation(summary = "Listar categorías activas", description = "Autenticado (cualquier rol) · RF-04. Para los filtros del catálogo.")
 	public List<CategoriaResponse> listar() {
-		throw new ApiException.NoImplementado("RF-04");
+		return servicio.listarCategorias();
 	}
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	@Operation(summary = "Crear categoría", description = "DUENO · RF-15. 409 CONFLICTO si el nombre ya existe.")
 	public CategoriaResponse crear(@Valid @RequestBody CategoriaRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-15");
+		return servicio.crearCategoria(solicitud);
 	}
 
 	@PutMapping("/{id}")
 	@Operation(summary = "Editar categoría", description = "DUENO · RF-15")
 	public CategoriaResponse actualizar(@PathVariable Integer id, @Valid @RequestBody CategoriaRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-15");
+		return servicio.actualizarCategoria(id, solicitud);
 	}
 
 	@PatchMapping("/{id}/estado")
 	@Operation(summary = "Activar o desactivar categoría", description = "DUENO · RF-15")
 	public CategoriaResponse cambiarEstado(@PathVariable Integer id, @Valid @RequestBody EstadoRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-15");
+		return servicio.cambiarEstadoCategoria(id, solicitud.activo());
 	}
 
 }

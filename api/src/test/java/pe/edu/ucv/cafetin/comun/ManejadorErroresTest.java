@@ -33,11 +33,12 @@ class ManejadorErroresTest {
 	MockMvc mvc;
 
 	@Test
+	@WithMockUser(roles = "DUENO")
 	void endpointSinImplementarResponde501() throws Exception {
-		mvc.perform(get("/api/categorias"))
+		mvc.perform(get("/api/reportes/mas-vendidos"))
 				.andExpect(status().isNotImplemented())
 				.andExpect(jsonPath("$.codigo").value("NO_IMPLEMENTADO"))
-				.andExpect(jsonPath("$.mensaje").value("Pendiente de implementar (RF-04)"))
+				.andExpect(jsonPath("$.mensaje").value("Pendiente de implementar (RF-22)"))
 				.andExpect(jsonPath("$.detalles").isEmpty());
 	}
 

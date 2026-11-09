@@ -22,32 +22,38 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import pe.edu.ucv.cafetin.comun.dto.EstadoRequest;
-import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.comun.error.ErrorRespuesta;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.InventarioResponse;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.ProductoActualizarRequest;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.ProductoRequest;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.ProductoResponse;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.RecargaRequest;
+import pe.edu.ucv.cafetin.inventario.service.ProductoService;
 
-/** Productos e inventario del dueño (RF-15, RF-18, RF-19). Responsable: Maria Elizabeth Ruiz. */
+/** Productos e inventario del dueño (RF-15, RF-18, RF-19). Responsable: Eliú Barrera. */
 @RestController
 @RequestMapping("/api")
 @Tag(name = "Inventario", description = "Productos, stock, alertas, categorías y proveedores (solo DUENO)")
 public class ProductoController {
+
+	private final ProductoService servicio;
+
+	public ProductoController(ProductoService servicio) {
+		this.servicio = servicio;
+	}
 
 	@GetMapping("/productos")
 	@Operation(summary = "Listar productos con su stock", description = "DUENO · RF-15, RF-19. Incluye los deshabilitados.")
 	public List<ProductoResponse> listar(
 			@Parameter(description = "true = solo activos; false = solo deshabilitados; vacío = todos")
 			@RequestParam(required = false) Boolean activo) {
-		throw new ApiException.NoImplementado("RF-19");
+		return servicio.listar(activo);
 	}
 
 	@GetMapping("/productos/{id}")
 	@Operation(summary = "Ver producto", description = "DUENO · RF-19")
 	public ProductoResponse obtener(@PathVariable Integer id) {
-		throw new ApiException.NoImplementado("RF-19");
+		return servicio.obtener(id);
 	}
 
 	@PostMapping("/productos")
@@ -56,7 +62,7 @@ public class ProductoController {
 	@ApiResponse(responseCode = "409", description = "Ya existe un producto con ese nombre (CONFLICTO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public ProductoResponse registrar(@Valid @RequestBody ProductoRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-15");
+		return servicio.registrar(solicitud);
 	}
 
 	@PutMapping("/productos/{id}")
@@ -64,19 +70,19 @@ public class ProductoController {
 	@ApiResponse(responseCode = "409", description = "Ya existe un producto con ese nombre (CONFLICTO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public ProductoResponse actualizar(@PathVariable Integer id, @Valid @RequestBody ProductoActualizarRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-19");
+		return servicio.actualizar(id, solicitud);
 	}
 
 	@PatchMapping("/productos/{id}/estado")
 	@Operation(summary = "Habilitar o deshabilitar producto", description = "DUENO · RF-19. Deshabilitado = oculto del catálogo, sin borrarlo.")
 	public ProductoResponse cambiarEstado(@PathVariable Integer id, @Valid @RequestBody EstadoRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-19");
+		return servicio.cambiarEstado(id, solicitud.activo());
 	}
 
 	@PatchMapping("/inventario/{idProducto}/recarga")
 	@Operation(summary = "Recargar stock", description = "DUENO · RF-18. Suma unidades y actualiza la fecha; marca como atendidas las alertas abiertas del producto.")
 	public InventarioResponse recargar(@PathVariable Integer idProducto, @Valid @RequestBody RecargaRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-18");
+		return servicio.recargar(idProducto, solicitud.cantidad());
 	}
 
 }
