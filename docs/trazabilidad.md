@@ -31,8 +31,8 @@ Los tests de la API están en `api/src/test/java/pe/edu/ucv/cafetin/`; los del p
 | RF-14 | Entregar | `DespachoIntegracionTest.entregarSinReciboVerificadoResponde409` y el flujo completo | ✅ | ✅ |
 | RF-15 | Alta de producto con stock | `inventario/ProductoIntegracionTest` (16) · `CategoriaProveedorIntegracionTest` (11) | ✅ API (PR #14) | 🟡 faltan las pantallas del dueño en el panel |
 | RF-16 | Descuento automático | `basedatos/TriggersTest.pagoActualizadoAPagadoDescuentaStock`, `pagoInsertadoYaPagadoNoDescuentaStock` · `PagoPedidoIntegracionTest` · prueba de carga | ✅ | ✅ |
-| RF-17 | Alerta de stock mínimo | `TriggersTest.alertaSoloAlCruzarElMinimoYAlAgotarse` · prueba de carga (una alerta por producto) · panel `componentes/ContadorAlertas.test.tsx` (5) | ✅ en la base y contador del panel | 🟡 falta `/api/alertas` en la API (hoy 501; el contador espera sin consultar de más) |
-| RF-18 | Recarga de stock | — | — | ❌ |
+| RF-17 | Alerta de stock mínimo | `TriggersTest.alertaSoloAlCruzarElMinimoYAlAgotarse` · prueba de carga (una alerta por producto) · `inventario/RecargaAlertaIntegracionTest` (listar, orden, solo las del dueño, marcar atendida, 404, 403) · panel `componentes/ContadorAlertas.test.tsx` (5) | ✅ base, `/api/alertas` y contador del panel | 🟡 falta la pantalla de alertas del panel |
+| RF-18 | Recarga de stock | `inventario/RecargaAlertaIntegracionTest` (suma y fecha, atiende las alertas del producto, no crea alertas, 400, 404, 403) | ✅ API | 🟡 falta la pantalla del dueño |
 | RF-19 | Alta, edición y baja | `ProductoIntegracionTest` (editar, deshabilitar, habilitar) | ✅ API (PR #14) | 🟡 faltan las pantallas del dueño |
 | RF-20 | Registrar venta | Cada pago `PAGADO` es la venta: `PagoPedidoIntegracionTest.montoEsElTotalDelPedido` · `reportes/ReporteIntegracionTest` (rango, orden, paginación, 30 días por defecto) | ✅ registro y `/api/reportes/ventas` | 🟡 falta la pantalla del dueño |
 | RF-21 | Ingresos día/semana/mes | `ReporteIntegracionTest` (día, semana desde lunes, mes, solo `PAGADO`, rango inválido 400) | ✅ API | 🟡 falta la pantalla del dueño |

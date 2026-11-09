@@ -23,7 +23,9 @@ contenedor Docker. Lee primero el `CLAUDE.md` raíz (sección "Lo que hace la BD
 - Neon: usa la conexión **directa** (host sin `-pooler`) con `sslmode=require`. La *pooled*
   (PgBouncer en modo transacción) no sirve para Flyway.
 - Propiedades de conexión (en `application.yml`, no en la URL): `stringtype=unspecified` (enums nativos)
-  y `currentSchema=cafetin` (los triggers nombran tablas sin esquema; sin esto fallan desde la API).
+  y `options=-c search_path=cafetin` (los triggers nombran tablas sin esquema; sin esto fallan desde la API).
+  No uses `currentSchema`: Neon lo ignora y la conexión queda en `"$user", public`; Testcontainers sí lo respeta,
+  así que los tests no lo detectan.
 - Paquete raíz `pe.edu.ucv.cafetin`. Perfil por defecto `dev`; los tests usan `@ActiveProfiles("test")`
   e `@Import(TestcontainersConfiguration.class)`.
 - Pool de Hikari pequeño (`maximum-pool-size: 5`): el plan gratuito de Neon limita conexiones.

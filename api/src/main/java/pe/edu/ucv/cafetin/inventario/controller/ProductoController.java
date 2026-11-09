@@ -22,7 +22,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import pe.edu.ucv.cafetin.comun.dto.EstadoRequest;
-import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.comun.error.ErrorRespuesta;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.InventarioResponse;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.ProductoActualizarRequest;
@@ -83,7 +82,7 @@ public class ProductoController {
 	@PatchMapping("/inventario/{idProducto}/recarga")
 	@Operation(summary = "Recargar stock", description = "DUENO · RF-18. Suma unidades y actualiza la fecha; marca como atendidas las alertas abiertas del producto.")
 	public InventarioResponse recargar(@PathVariable Integer idProducto, @Valid @RequestBody RecargaRequest solicitud) {
-		throw new ApiException.NoImplementado("RF-18");
+		return servicio.recargar(idProducto, solicitud.cantidad());
 	}
 
 }

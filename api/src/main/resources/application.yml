@@ -23,7 +23,9 @@ spring:
         stringtype: unspecified       # enums nativos de PostgreSQL (estado_pedido_enum, …)
         # search_path = cafetin en cada conexión. Imprescindible: las funciones de los
         # triggers usan nombres sin esquema (pedido, inventario…) y fallarían con 'public'.
-        currentSchema: cafetin
+        # Con 'options', no con 'currentSchema': Neon ignora currentSchema (el parámetro de
+        # arranque search_path) y la conexión quedaba en "$user", public. 'options' sí lo respeta.
+        options: "-c search_path=cafetin"
 
   # Correo de recuperación (RF-03): solo se activa si existe SPRING_MAIL_HOST (Render); ver .env.example.
   mail:
