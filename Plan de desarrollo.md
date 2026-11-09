@@ -382,7 +382,7 @@ Las pruebas no esperan al final: cada fase entrega sus tests y esta fase consoli
 
 - [ ] Matriz de trazabilidad en `docs/`: RF-01…RF-22 y RNF-01…RNF-08 → casos de prueba → resultado.
 - [ ] Umbral de cobertura en servicios acordado por el equipo (JaCoCo) y verificado en CI.
-- [ ] Prueba de carga del flujo crear + pagar, con el objetivo del informe: ≈100 pedidos por hora en hora punta (4 trabajadores), cada confirmación por debajo de 5 s.
+- [x] Prueba de carga del flujo crear + pagar, con el objetivo del informe: ≈100 pedidos por hora en hora punta (4 trabajadores), cada confirmación por debajo de 5 s. `pruebas/carga/pedido-y-pago.js` (k6 en Docker): en local, p95 de 35–72 ms, 0 % de errores y stock nunca negativo. Falta repetirla contra Render.
 - [ ] Pruebas exploratorias en un teléfono real y registro de defectos como issues de GitHub.
 
 Prompt sugerido:
