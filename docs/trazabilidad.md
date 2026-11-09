@@ -1,8 +1,8 @@
 # Matriz de trazabilidad: requisitos → pruebas → resultado
 
-Estado al **08/11/2026**, con `main` más los PR pendientes de fusionar (Flyway, Java 25, despliegue,
-correo de recuperación, push, carga y el #14 de inventario). Con todo combinado, `./mvnw verify` pasa
-**187 tests** de la API y `npm test` pasa **26** del panel.
+Estado al **09/11/2026**, con `main` más los PR pendientes de fusionar: el #15 (Flyway, Java 25,
+despliegue, correo de recuperación, push, carga), el #14 de inventario y `feat/panel-contador-alertas`.
+Con todo combinado, `./mvnw verify` pasa **189 tests** de la API y `npm test` pasa **31** del panel.
 
 Responsable de mantenerla: José Daniel Lizca (Fase 6). Cada PR que agregue un RF o un test actualiza
 su fila.
@@ -31,7 +31,7 @@ Los tests de la API están en `api/src/test/java/pe/edu/ucv/cafetin/`; los del p
 | RF-14 | Entregar | `DespachoIntegracionTest.entregarSinReciboVerificadoResponde409` y el flujo completo | ✅ | ✅ |
 | RF-15 | Alta de producto con stock | `inventario/ProductoIntegracionTest` (16) · `CategoriaProveedorIntegracionTest` (11) | ✅ API (PR #14) | 🟡 faltan las pantallas del dueño en el panel |
 | RF-16 | Descuento automático | `basedatos/TriggersTest.pagoActualizadoAPagadoDescuentaStock`, `pagoInsertadoYaPagadoNoDescuentaStock` · `PagoPedidoIntegracionTest` · prueba de carga | ✅ | ✅ |
-| RF-17 | Alerta de stock mínimo | `TriggersTest.alertaSoloAlCruzarElMinimoYAlAgotarse` · prueba de carga (una alerta por producto) | ✅ en la base | 🟡 falta `/api/alertas` y el contador en el panel |
+| RF-17 | Alerta de stock mínimo | `TriggersTest.alertaSoloAlCruzarElMinimoYAlAgotarse` · prueba de carga (una alerta por producto) · panel `componentes/ContadorAlertas.test.tsx` (5) | ✅ en la base y contador del panel | 🟡 falta `/api/alertas` en la API (hoy 501; el contador espera sin consultar de más) |
 | RF-18 | Recarga de stock | — | — | ❌ |
 | RF-19 | Alta, edición y baja | `ProductoIntegracionTest` (editar, deshabilitar, habilitar) | ✅ API (PR #14) | 🟡 faltan las pantallas del dueño |
 | RF-20 | Registrar venta | Cada pago `PAGADO` es la venta: `PagoPedidoIntegracionTest.montoEsElTotalDelPedido` | ✅ registro | 🟡 falta el reporte de ventas |
@@ -48,7 +48,7 @@ Los tests de la API están en `api/src/test/java/pe/edu/ucv/cafetin/`; los del p
 | RNF-04 | Cifrado / HTTPS | `AuthIntegracionTest.laContrasenaSeGuardaConBcrypt` · `RecuperacionIntegracionTest` (el token se guarda como hash) · sin datos de tarjeta (solo `referencia`) | ✅ en la API | 🟡 HTTPS lo dan Render y Vercel: confirmarlo al desplegar |
 | RNF-05 | Inventario e ingresos solo para el dueño | `AuthIntegracionTest.estudianteEnReportesResponde403ConFormatoDeError`, `trabajadorNoEntraAInventarioNiAPedidosDeEstudiante` · `ProductoIntegracionTest.estudianteYTrabajadorNoAccedenAProductos` | ✅ | ✅ |
 | RNF-06 | Disponibilidad | `cuentas/HealthCheckIntegracionTest` (3) | ✅ health check para Render | 🟡 falta desplegar y medir la disponibilidad real |
-| RNF-07 | Android y web | Panel: 26 tests (`npm test`) | ✅ web | ❌ falta la app Android |
+| RNF-07 | Android y web | Panel: 31 tests (`npm test`) | ✅ web | ❌ falta la app Android |
 | RNF-08 | Escalable | API sin sesión (JWT), base gestionada (Neon) · prueba de carga | ≈ 14,7 pagos/s en una laptop | 🟡 sin prueba con varias instancias |
 
 ## Casos obligatorios de `CLAUDE.md`
