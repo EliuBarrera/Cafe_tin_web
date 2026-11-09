@@ -78,7 +78,7 @@ Consecuencias:
 - `hibernate.default_schema=cafetin`, `ddl-auto: validate`.
 - Enums nativos de PostgreSQL: `@Enumerated(EnumType.STRING)` + `@Column(columnDefinition = "<tipo>_enum")`
   (sin `columnDefinition`, `ddl-auto: validate` falla) y `stringtype=unspecified` en cada conexión.
-- Cada conexión fija `currentSchema=cafetin` (application.yml): las funciones de los triggers nombran
+- Cada conexión fija `search_path=cafetin` con `options=-c search_path=cafetin` (application.yml; Neon ignora `currentSchema`): las funciones de los triggers nombran
   tablas sin esquema y fallan si el `search_path` es `public`. No lo quites.
 - `Usuario` y `Notificacion`: `@Inheritance(strategy = JOINED)`; `Usuario` usa `@DiscriminatorColumn(name = "tipo_usuario")`.
 - Entidades en `<modulo>.modelo` (p. ej. `pedidos.modelo.Pedido`). `Notificacion` está en `comun.modelo`.
@@ -178,6 +178,7 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 08/11/2026 · Health check con `spring-boot-starter-actuator`: solo `/actuator/health`, público y sin detalles; Render usa `/actuator/health/liveness` · RNF-06; liveness no consulta la base, así Neon puede suspenderse y no se gasta la cuota.
 - 08/11/2026 · Recuperación de contraseña por correo con `spring-boot-starter-mail` (SMTP de Gmail en Render) · sin un envío real, RF-03 no funcionaba en producción. Sin `SPRING_MAIL_HOST` se usa el log, solo en dev.
 - 08/11/2026 · Push por la API HTTP v1 de FCM sin `firebase-admin` (JWT RS256 con Nimbus y `RestClient`) · el SDK suma decenas de librerías y memoria en el plan de 512 MB de Render; Nimbus ya viene con la seguridad.
+- 09/11/2026 · `search_path` con `options=-c search_path=cafetin` en vez de `currentSchema` · Neon ignora `currentSchema` y las conexiones quedaban en `public`: fallaban los triggers (crear pedido, pagar, editar inventario) y las consultas nativas. Testcontainers sí lo respeta; `SearchPathTest` fija la configuración.
 
 ## Qué no hacer
 
