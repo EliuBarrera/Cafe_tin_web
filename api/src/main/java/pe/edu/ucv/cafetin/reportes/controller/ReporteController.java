@@ -15,17 +15,23 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import pe.edu.ucv.cafetin.comun.dto.Pagina;
-import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.reportes.dto.ReportesDto.IngresoPeriodoResponse;
 import pe.edu.ucv.cafetin.reportes.dto.ReportesDto.Periodo;
 import pe.edu.ucv.cafetin.reportes.dto.ReportesDto.ProductoVendidoResponse;
 import pe.edu.ucv.cafetin.reportes.dto.ReportesDto.VentaResponse;
+import pe.edu.ucv.cafetin.reportes.service.ReporteService;
 
-/** Ingresos y ventas (RF-20 a RF-22), solo DUENO (RNF-05). Responsable: Maria Elizabeth Ruiz. */
+/** Ingresos y ventas (RF-20 a RF-22), solo DUENO (RNF-05). Responsable: Eliú Barrera. */
 @RestController
 @RequestMapping("/api/reportes")
 @Tag(name = "Ingresos", description = "Ventas, ingresos por periodo y productos más vendidos (solo DUENO)")
 public class ReporteController {
+
+	private final ReporteService servicio;
+
+	public ReporteController(ReporteService servicio) {
+		this.servicio = servicio;
+	}
 
 	@GetMapping("/ingresos")
 	@Operation(summary = "Ingresos por día, semana o mes", description = """
@@ -37,14 +43,14 @@ public class ReporteController {
 			@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
 			@Parameter(description = "Hasta (incluido), yyyy-MM-dd") @RequestParam(required = false)
 			@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
-		throw new ApiException.NoImplementado("RF-21");
+		return servicio.ingresos(periodo, desde, hasta);
 	}
 
 	@GetMapping("/mas-vendidos")
 	@Operation(summary = "Productos más vendidos", description = "DUENO · RF-22. Ordenados por unidades vendidas, de todo el histórico.")
 	public List<ProductoVendidoResponse> masVendidos(
 			@RequestParam(defaultValue = "10") @Min(1) @Max(100) int limite) {
-		throw new ApiException.NoImplementado("RF-22");
+		return servicio.masVendidos(limite);
 	}
 
 	@GetMapping("/ventas")
@@ -54,7 +60,7 @@ public class ReporteController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
 			@RequestParam(defaultValue = "0") @Min(0) int pagina,
 			@RequestParam(defaultValue = "50") @Min(1) @Max(200) int tamano) {
-		throw new ApiException.NoImplementado("RF-20");
+		return servicio.ventas(desde, hasta, pagina, tamano);
 	}
 
 }
