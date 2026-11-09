@@ -381,9 +381,9 @@ Las pruebas no esperan al final: cada fase entrega sus tests y esta fase consoli
 | Carga | k6 o JMeter | RNF-02 y RNF-03: pedidos simultáneos de hora punta, confirmación por debajo de 5 s |
 | Aceptación | Lista de RF con evidencia | Recorrido por rol con los datos del seed |
 
-- [ ] Matriz de trazabilidad en `docs/`: RF-01…RF-22 y RNF-01…RNF-08 → casos de prueba → resultado.
+- [x] Matriz de trazabilidad en `docs/`: RF-01…RF-22 y RNF-01…RNF-08 → casos de prueba → resultado. `docs/trazabilidad.md` (08/11): se actualiza en cada PR que agregue un RF o un test.
 - [ ] Umbral de cobertura en servicios acordado por el equipo (JaCoCo) y verificado en CI.
-- [ ] Prueba de carga del flujo crear + pagar, con el objetivo del informe: ≈100 pedidos por hora en hora punta (4 trabajadores), cada confirmación por debajo de 5 s.
+- [x] Prueba de carga del flujo crear + pagar, con el objetivo del informe: ≈100 pedidos por hora en hora punta (4 trabajadores), cada confirmación por debajo de 5 s. `pruebas/carga/pedido-y-pago.js` (k6 en Docker): en local, p95 de 35–72 ms, 0 % de errores y stock nunca negativo. Falta repetirla contra Render.
 - [ ] Pruebas exploratorias en un teléfono real y registro de defectos como issues de GitHub.
 
 Prompt sugerido:
