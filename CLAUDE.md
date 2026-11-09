@@ -178,6 +178,7 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 08/11/2026 · Health check con `spring-boot-starter-actuator`: solo `/actuator/health`, público y sin detalles; Render usa `/actuator/health/liveness` · RNF-06; liveness no consulta la base, así Neon puede suspenderse y no se gasta la cuota.
 - 08/11/2026 · Recuperación de contraseña por correo con `spring-boot-starter-mail` (SMTP de Gmail en Render) · sin un envío real, RF-03 no funcionaba en producción. Sin `SPRING_MAIL_HOST` se usa el log, solo en dev.
 - 08/11/2026 · Push por la API HTTP v1 de FCM sin `firebase-admin` (JWT RS256 con Nimbus y `RestClient`) · el SDK suma decenas de librerías y memoria en el plan de 512 MB de Render; Nimbus ya viene con la seguridad.
+- 09/11/2026 · Cobertura con `jacoco-maven-plugin` en `./mvnw verify`: cada paquete `*.service` ≥ 90 % de líneas y ≥ 75 % de ramas, total ≥ 90 % de líneas · Fase 6; umbral con margen sobre lo medido (93,7 % / 84,9 %). Si un PR lo baja, el CI falla: agrega tests, no bajes el umbral sin acordarlo.
 - 09/11/2026 · `search_path` con `options=-c search_path=cafetin` en vez de `currentSchema` · Neon ignora `currentSchema` y las conexiones quedaban en `public`: fallaban los triggers (crear pedido, pagar, editar inventario) y las consultas nativas. Testcontainers sí lo respeta; `SearchPathTest` fija la configuración.
 
 ## Qué no hacer

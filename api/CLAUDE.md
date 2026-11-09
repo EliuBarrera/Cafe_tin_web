@@ -45,4 +45,5 @@ contenedor Docker. Lee primero el `CLAUDE.md` raíz (sección "Lo que hace la BD
 - Paquetes por módulo (`cuentas`, `catalogo`, `pedidos`, `despacho`, `inventario`, `reportes`, `comun`)
   y dentro `controller` / `service` / `repository` / `dto`.
 - Tests de integración con Testcontainers (PostgreSQL 16, Docker local), nunca H2 ni Neon.
-  Hecho = `./mvnw verify` en verde.
+  Hecho = `./mvnw verify` en verde, incluido el umbral de cobertura de JaCoCo (informe en
+  `target/site/jacoco/index.html`).

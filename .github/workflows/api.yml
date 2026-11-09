@@ -37,3 +37,12 @@ jobs:
       - name: Tests
         if: steps.proyecto.outputs.existe == 'true'
         run: ./mvnw -B verify
+
+      # Informe de cobertura (JaCoCo) descargable desde la ejecución, también si el umbral falla.
+      - name: Informe de cobertura
+        if: always() && steps.proyecto.outputs.existe == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-api
+          path: api/target/site/jacoco/
+          if-no-files-found: ignore
