@@ -15,3 +15,6 @@ export type PedidoDespacho = Required<Omit<Esquemas['PedidoDespachoResponse'], '
   items: LineaDespacho[]
 }
 export type EstadoPedido = PedidoDespacho['estado']
+
+// Alertas de stock (RF-17): las genera la base al cruzar el mínimo o agotarse.
+export type Alerta = Required<Esquemas['AlertaResponse']>

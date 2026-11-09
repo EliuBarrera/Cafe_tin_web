@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router'
 
 import { SECCIONES } from '../navegacion'
 import { useSesion } from '../sesion/SesionProvider'
+import { ContadorAlertas } from './ContadorAlertas'
 
 export function Shell() {
   const { usuario, cerrarSesion } = useSesion()
@@ -15,6 +16,7 @@ export function Shell() {
           {SECCIONES.filter((s) => s.roles.includes(usuario.rol)).map((s) => (
             <NavLink key={s.ruta} to={`/${s.ruta}`}>
               {s.titulo}
+              {s.ruta === 'alertas' && <ContadorAlertas />}
             </NavLink>
           ))}
         </nav>
