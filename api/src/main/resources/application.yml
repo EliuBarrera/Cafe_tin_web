@@ -58,6 +58,18 @@ springdoc:
   writer-with-order-by-keys: true     # salida estable: docs/openapi.yaml no cambia de orden
   default-produces-media-type: application/json
 
+# Health check de Render (RNF-06). Solo se expone /actuator/health, sin detalles. Render usa
+# /actuator/health/liveness: no consulta la base, así Neon puede suspenderse cuando no hay uso.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 ---
 # Desarrollo: tu rama de Neon (dev-lizca, dev-eliu, dev-maria) + datos de prueba V2.
 spring:
