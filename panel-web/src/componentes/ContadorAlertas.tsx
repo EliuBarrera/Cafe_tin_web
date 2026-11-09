@@ -27,7 +27,7 @@ export function ContadorAlertas() {
 
   return (
     <>
-      <span className="contador" aria-hidden="true">
+      <span className="contador-menu" aria-hidden="true">
         {pendientes > 99 ? '99+' : pendientes}
       </span>
       <span className="solo-lector">, {pendientes} pendientes</span>

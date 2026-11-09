@@ -181,7 +181,7 @@ a:focus-visible {
 }
 
 /* Número de alertas pendientes junto a "Alertas" (ContadorAlertas) */
-.contador {
+.contador-menu {
   display: inline-block;
   min-width: 1.25rem;
   margin-left: 0.375rem;
