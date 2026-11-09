@@ -175,6 +175,9 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 02/11/2026 · JWT con `spring-boot-starter-security-oauth2-resource-server` (HS256, 8 h; `sub` = id, `rol` = tipo) · oficial de Spring, Boot gestiona la versión y evita un filtro propio.
 - 08/11/2026 · Flyway con `out-of-order: true` · con rangos por módulo, una V3 creada después de aplicar la V10 se rechazaría; así se aplica igual. Una migración no debe depender de otra de un rango mayor que aún no esté en `main`.
 - 08/11/2026 · Java 25 (LTS) para la API, en vez de Java 21 · es la LTS más reciente y Spring Boot 4.1 la soporta. Cada integrante necesita un JDK 25 local para `./mvnw verify` (`sudo apt install openjdk-25-jdk` en Ubuntu 24.04); el CI y el `Dockerfile` usan Temurin 25.
+- 08/11/2026 · Health check con `spring-boot-starter-actuator`: solo `/actuator/health`, público y sin detalles; Render usa `/actuator/health/liveness` · RNF-06; liveness no consulta la base, así Neon puede suspenderse y no se gasta la cuota.
+- 08/11/2026 · Recuperación de contraseña por correo con `spring-boot-starter-mail` (SMTP de Gmail en Render) · sin un envío real, RF-03 no funcionaba en producción. Sin `SPRING_MAIL_HOST` se usa el log, solo en dev.
+- 08/11/2026 · Push por la API HTTP v1 de FCM sin `firebase-admin` (JWT RS256 con Nimbus y `RestClient`) · el SDK suma decenas de librerías y memoria en el plan de 512 MB de Render; Nimbus ya viene con la seguridad.
 
 ## Qué no hacer
 
