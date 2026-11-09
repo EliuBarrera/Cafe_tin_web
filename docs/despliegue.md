@@ -41,8 +41,22 @@ Variables de entorno (**Environment**):
 | `JWT_SECRET` | uno **nuevo**, generado con `openssl rand -base64 48` (una sola línea, mínimo 32 bytes) |
 | `CORS_ORIGINS` | `https://cafe-tin-web.vercel.app` |
 | `CAFETIN_RECUPERACION_ENLACEBASE` | `https://cafe-tin-web.vercel.app/restablecer?token=` |
+| `SPRING_MAIL_HOST` | `smtp.gmail.com` (correo de recuperación, RF-03) |
+| `SPRING_MAIL_PORT` | `587` |
+| `SPRING_MAIL_USERNAME` | la cuenta de Gmail que envía los correos |
+| `SPRING_MAIL_PASSWORD` | una **contraseña de aplicación** de esa cuenta, nunca la contraseña normal |
+| `FIREBASE_CREDENTIALS` | `/etc/secrets/firebase.json` (push, RF-08; ver abajo) |
 
 No reutilices el `JWT_SECRET` de tu `.env`: si se filtra, cualquiera puede firmar tokens de dueño.
+
+**Correo (RF-03):** sin `SPRING_MAIL_HOST` la API arranca igual, pero nadie recibe el enlace para
+recuperar su contraseña. La contraseña de aplicación se crea en la cuenta de Google → Seguridad →
+Verificación en dos pasos → Contraseñas de aplicaciones.
+
+**Push (RF-08):** en Firebase → Configuración del proyecto → Cuentas de servicio → *Generar nueva clave
+privada* se descarga un JSON. En Render súbelo en **Environment → Secret Files** con el nombre
+`firebase.json` (queda en `/etc/secrets/firebase.json`). Sin `FIREBASE_CREDENTIALS` la API arranca igual
+y los avisos solo llegan a la bandeja de la app. Ese JSON nunca va al repositorio.
 
 **Health check:** `/actuator/health/liveness` responde `{"status":"UP"}` sin token. No consulta la base
 a propósito: Render lo llama cada pocos segundos y, si tocara Neon, la base nunca se suspendería y se
@@ -111,7 +125,9 @@ gratuito de Render apaga el servicio sin tráfico y Neon suspende la base.
 Si el navegador muestra un error de CORS, revisa que `CORS_ORIGINS` en Render tenga exactamente el
 dominio de Vercel, con `https://` y sin `/` al final.
 
-## Pendientes conocidos
+## Después de desplegar
 
-- **Recuperar contraseña (RF-03) no envía nada en producción:** `EnvioRecuperacionLog` solo escribe
-  el enlace en el log y en `prod` está desactivado. Falta un envío real (por ejemplo, correo).
+- Prueba la recuperación de contraseña con una cuenta real: el correo debe llegar en segundos.
+- Repite la prueba de carga contra un servicio de Render conectado a una rama de Neon de prueba,
+  **nunca** al de producción (`pruebas/carga/README.md`; el script exige
+  `-e CONFIRMO_NO_ES_PRODUCCION=si` para aceptar una URL de Render).
