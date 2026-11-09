@@ -400,12 +400,12 @@ Hecho cuando: cada RF tiene al menos un caso con resultado registrado y los RNF 
 Se publica una versión estable para la demo: base de datos en Neon (rama `main`), API en Render, panel en Vercel y app como APK firmado. Los tres dan HTTPS (RNF-04).
 
 - [ ] `Dockerfile` multietapa para la API; `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `CORS_ORIGINS` y la credencial de Firebase por variables de entorno.
-- [ ] **Render**: *New* → *Web Service* desde el repo de GitHub, *Root Directory* `api`, entorno *Docker*, región **Ohio**, perfil `prod`, variables de entorno con la conexión **directa** a la rama `main` de Neon, *Health Check Path* `/actuator/health`. Revisar las condiciones del plan gratuito al desplegar: si el servicio se duerme sin tráfico, el primer arranque de la JVM tarda.
+- [ ] **Render**: *New* → *Web Service* desde el repo de GitHub, *Root Directory* `api`, entorno *Docker*, región **Ohio**, perfil `prod`, variables de entorno con la conexión **directa** a la rama `main` de Neon, *Health Check Path* vacío mientras la API no tenga Actuator (ver `docs/despliegue.md`). Revisar las condiciones del plan gratuito al desplegar: si el servicio se duerme sin tráfico, el primer arranque de la JVM tarda.
 - [ ] **Vercel**: *Add New* → *Project* desde el repo, *Root Directory* `panel-web`, framework Vite, variable `VITE_API_URL` con la URL de Render, `vercel.json` con rewrite a `/index.html`. Agregar el dominio de Vercel a `CORS_ORIGINS` en Render.
 - [ ] **Neon**: la API en `prod` aplica solo las migraciones del esquema (sin V2) sobre la rama `main`.
 - [ ] App: APK de release firmado con la URL de producción, distribuido directamente (sin Play Store).
-- [ ] RNF-06: health check con Spring Boot Actuator y reinicio automático del contenedor. El 99 % de disponibilidad no se puede demostrar en dos semanas; se documenta cómo se mediría.
-- [ ] Datos de demo: dueño, dos trabajadores, varios estudiantes y un catálogo realista; V2 no se aplica en producción salvo para la demo.
+- [ ] RNF-06: health check con Spring Boot Actuator (falta aprobar la dependencia `spring-boot-starter-actuator`) y reinicio automático del contenedor. El 99 % de disponibilidad no se puede demostrar en dos semanas; se documenta cómo se mediría.
+- [ ] Datos de demo: dueño, dos trabajadores, varios estudiantes y un catálogo realista; V2 no se aplica en producción salvo para la demo. El primer dueño de producción se crea con `api/scripts/hash-contrasena.sh` y el SQL de `docs/despliegue.md`.
 - [ ] Manual de usuario por rol y README técnico por módulo (Claude Code puede redactar el borrador a partir del código; el equipo lo revisa).
 - [ ] Ensayo completo de la demo y tag `v1.0`.
 
