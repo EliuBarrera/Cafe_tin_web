@@ -38,3 +38,6 @@ app-android/.externalNativeBuild/
 app-android/.cxx/
 *.apk
 *.aab
+
+# Python (scripts de api/scripts)
+__pycache__/

@@ -407,8 +407,8 @@ Se publica una versión estable para la demo: base de datos en Neon (rama `main`
 - [ ] App: APK de release firmado con la URL de producción, distribuido directamente (sin Play Store).
 - [x] RNF-06: health check con Spring Boot Actuator (`/actuator/health/liveness`, público y sin detalles; `HealthCheckIntegracionTest`). Pendiente al desplegar: confirmar el reinicio automático del contenedor. El 99 % de disponibilidad no se puede demostrar en dos semanas; se documenta cómo se mediría.
 - [ ] Datos de demo: dueño, dos trabajadores, varios estudiantes y un catálogo realista; V2 no se aplica en producción salvo para la demo. El primer dueño de producción se crea con `api/scripts/hash-contrasena.sh` y el SQL de `docs/despliegue.md`; el resto, con `api/scripts/datos_demo.py` (por la API, sin duplicar si se repite). Falta correrlo en producción.
-- [ ] Manual de usuario por rol y README técnico por módulo (Claude Code puede redactar el borrador a partir del código; el equipo lo revisa).
-- [ ] Ensayo completo de la demo y tag `v1.0`.
+- [x] Manual de usuario por rol y README técnico por módulo (borradores del 09/11 para que el equipo los revise): `docs/manual-usuario.md`, `README.md`, `api/README.md`, `panel-web/README.md`. Falta la parte del estudiante cuando exista la app.
+- [ ] Ensayo completo de la demo y tag `v1.0`. Guion en `docs/guion-demo.md` (ensayado el 09/11 contra la imagen de producción en local; falta sobre Render). `api/scripts/pedido_demo.py` hace de estudiante mientras no exista la app.
 
 Hecho cuando: la demo corre de punta a punta sobre la versión desplegada, sin depender de ninguna laptop del equipo.
 

@@ -43,10 +43,13 @@ PRODUCTOS = [
     ("Pan con pollo", "Snacks", "Panadería San Martín", "4.50", 30, 8),
     ("Empanada de carne", "Snacks", "Panadería San Martín", "4.00", 25, 8),
     ("Chifles 50 g", "Snacks", "Distribuidora Nor-Sur", "2.00", 30, 10),
-    ("Galletas de avena", "Snacks", "Distribuidora Nor-Sur", "1.50", 6, 10),  # empieza bajo el mínimo
+    # Justo sobre el mínimo: pedir 2 en la demo cruza el mínimo y la alerta aparece en vivo (RF-17).
+    ("Galletas de avena", "Snacks", "Distribuidora Nor-Sur", "1.50", 11, 10),
     ("Arroz con leche", "Postres", None, "3.00", 20, 6),
     ("Gelatina", "Postres", None, "2.00", 0, 5),  # agotado: el catálogo lo muestra AGOTADO
 ]
+
+PRODUCTO_ALERTA = "Galletas de avena"
 
 TRABAJADORES = [
     ("Carmen", "Díaz Morales", "trabajador.demo1@cafetin.pe", "TRB-D01", "MANANA"),
@@ -172,7 +175,8 @@ def cargar_estudiantes(api, clave):
 def generar_ventas(api, tokens, cantidad):
     """Pedidos pagados para que los reportes (RF-20 a RF-22) tengan datos en la demo."""
     _, catalogo = api.exigir({200}, "GET", "/api/catalogo", token=tokens[0])
-    disponibles = [p for p in catalogo if p["estadoStock"] != "AGOTADO"]
+    # Las galletas se reservan para mostrar la alerta en vivo (ver PRODUCTOS).
+    disponibles = [p for p in catalogo if p["estadoStock"] != "AGOTADO" and p["nombre"] != PRODUCTO_ALERTA]
     pagados = 0
     for n in range(cantidad):
         producto = random.choice(disponibles)

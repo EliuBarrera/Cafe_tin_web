@@ -156,8 +156,8 @@ dominio de Vercel, con `https://` y sin `/` al final.
 python3 api/scripts/datos_demo.py https://<servicio>.onrender.com --dueno <correo del dueño> --ventas 12
 ```
 
-Crea, a través de la API, 4 categorías, 2 proveedores, 13 productos (uno agotado y otro bajo el
-mínimo, para mostrar las alertas), 2 trabajadores y 5 estudiantes; con `--ventas` también pedidos
+Crea, a través de la API, 4 categorías, 2 proveedores, 13 productos (uno agotado y otro justo
+sobre el mínimo, para mostrar una alerta en vivo), 2 trabajadores y 5 estudiantes; con `--ventas` también pedidos
 pagados para que los reportes tengan datos. Pide la contraseña del dueño y una contraseña para las
 cuentas de demo, sin mostrarlas, y al final lista los correos. Si lo corres dos veces no duplica nada.
 Solo necesita Python 3, sin librerías extra.
