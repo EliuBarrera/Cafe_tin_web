@@ -2,16 +2,17 @@ package pe.edu.ucv.cafetin.cuentas.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import pe.edu.ucv.cafetin.comun.evento.PedidoEstadoCambiado;
-import pe.edu.ucv.cafetin.cuentas.modelo.Usuario;
 import pe.edu.ucv.cafetin.cuentas.repository.UsuarioRepository;
 
 /**
  * Envía por push los avisos de estado del pedido (RF-08). Escucha después del commit
  * ({@code AFTER_COMMIT}, el valor por defecto): un cambio que termina en 409 y se revierte no avisa.
+ * Corre en otro hilo ({@link EnviosEnSegundoPlano}): el trabajador no espera a que responda FCM.
  * La fila en {@code notificacion} ya quedó guardada, así que un fallo del envío solo se registra.
  */
 @Component
@@ -27,9 +28,10 @@ public class NotificacionPush {
 		this.envio = envio;
 	}
 
+	@Async
 	@TransactionalEventListener
 	public void alCambiarEstado(PedidoEstadoCambiado aviso) {
-		String token = usuarios.findById(aviso.idUsuario()).map(Usuario::getFcmToken).orElse(null);
+		String token = usuarios.fcmToken(aviso.idUsuario()).orElse(null);
 		if (token == null) {
 			return; // sin teléfono registrado: la app lo verá en la bandeja al abrirse
 		}

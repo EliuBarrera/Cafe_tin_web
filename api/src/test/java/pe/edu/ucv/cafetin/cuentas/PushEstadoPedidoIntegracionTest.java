@@ -1,12 +1,15 @@
 package pe.edu.ucv.cafetin.cuentas;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -14,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static pe.edu.ucv.cafetin.soporte.DatosPrueba.como;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +50,9 @@ import pe.edu.ucv.cafetin.soporte.DatosPrueba;
 class PushEstadoPedidoIntegracionTest {
 
 	private static final String TOKEN = "token-fcm-del-telefono";
+	/** El push sale en otro hilo: se espera hasta este límite a que llegue (o no) al envío. */
+	private static final long ESPERA_ENVIO = 3000;
+	private static final long ESPERA_SIN_ENVIO = 300;
 
 	@Autowired
 	MockMvc mvc;
@@ -85,7 +92,7 @@ class PushEstadoPedidoIntegracionTest {
 
 		// "preparar" no avisa: no existe un tipo de notificación para EN_PREPARACION.
 		ArgumentCaptor<PedidoEstadoCambiado> avisos = ArgumentCaptor.forClass(PedidoEstadoCambiado.class);
-		verify(envio, times(3)).enviar(eq(TOKEN), avisos.capture());
+		verify(envio, timeout(ESPERA_ENVIO).times(3)).enviar(eq(TOKEN), avisos.capture());
 		assertThat(avisos.getAllValues()).extracting(PedidoEstadoCambiado::tipo).containsExactly(
 				TipoNotificacion.PEDIDO_CONFIRMADO, TipoNotificacion.PEDIDO_LISTO, TipoNotificacion.PEDIDO_ENTREGADO);
 		assertThat(avisos.getAllValues()).allSatisfy(aviso -> {
@@ -102,7 +109,7 @@ class PushEstadoPedidoIntegracionTest {
 
 		accion(id, "listo").andExpect(status().isConflict()); // PENDIENTE → LISTO no está permitido
 
-		verify(envio, never()).enviar(anyString(), any());
+		verify(envio, after(ESPERA_SIN_ENVIO).never()).enviar(anyString(), any());
 	}
 
 	@Test
@@ -111,7 +118,7 @@ class PushEstadoPedidoIntegracionTest {
 
 		accion(id, "confirmar").andExpect(status().isOk());
 
-		verify(envio, never()).enviar(anyString(), any());
+		verify(envio, after(ESPERA_SIN_ENVIO).never()).enviar(anyString(), any());
 		assertThat(tiposGuardados(id)).containsExactly("PEDIDO_CONFIRMADO");
 	}
 
@@ -136,8 +143,7 @@ class PushEstadoPedidoIntegracionTest {
 
 		accion(id, "confirmar").andExpect(status().isOk());
 
-		assertThat(jdbc.queryForObject("SELECT fcm_token FROM usuario WHERE id_usuario = ?", String.class, estudiante))
-				.isNull();
+		await().atMost(Duration.ofMillis(ESPERA_ENVIO)).untilAsserted(() -> assertThat(tokenGuardado()).isNull());
 	}
 
 	@Test
@@ -151,11 +157,32 @@ class PushEstadoPedidoIntegracionTest {
 
 		accion(id, "confirmar").andExpect(status().isOk());
 
-		assertThat(jdbc.queryForObject("SELECT fcm_token FROM usuario WHERE id_usuario = ?", String.class, estudiante))
-				.isEqualTo("token-nuevo-del-telefono");
+		verify(envio, timeout(ESPERA_ENVIO)).enviar(eq(TOKEN), any());
+		await().pollDelay(Duration.ofMillis(ESPERA_SIN_ENVIO)).atMost(Duration.ofMillis(ESPERA_ENVIO))
+				.untilAsserted(() -> assertThat(tokenGuardado()).isEqualTo("token-nuevo-del-telefono"));
+	}
+
+	@Test
+	void elTrabajadorNoEsperaAQueRespondaFcm() throws Exception {
+		guardarToken(TOKEN);
+		doAnswer(invocacion -> {
+			Thread.sleep(2000); // FCM lento
+			return null;
+		}).when(envio).enviar(anyString(), any());
+		int id = pedidoPagado();
+
+		long inicio = System.nanoTime();
+		accion(id, "confirmar").andExpect(status().isOk());
+
+		assertThat(Duration.ofNanos(System.nanoTime() - inicio)).isLessThan(Duration.ofSeconds(1));
+		verify(envio, timeout(ESPERA_ENVIO)).enviar(eq(TOKEN), any());
 	}
 
 	// ------------------------------------------------------------------ ayudas
+
+	private String tokenGuardado() {
+		return jdbc.queryForObject("SELECT fcm_token FROM usuario WHERE id_usuario = ?", String.class, estudiante);
+	}
 
 	private void guardarToken(String token) {
 		jdbc.update("UPDATE usuario SET fcm_token = ? WHERE id_usuario = ?", token, estudiante);

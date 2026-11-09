@@ -19,6 +19,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
 	boolean existsByIdAndActivoTrue(Integer id);
 
+	/** Solo la columna: cargar el {@code Usuario} completo haría joins con las tres tablas de subtipo. */
+	@Query(value = "SELECT fcm_token FROM usuario WHERE id_usuario = :id", nativeQuery = true)
+	Optional<String> fcmToken(@Param("id") Integer id);
+
 	@Modifying
 	@Query(value = "UPDATE usuario SET fcm_token = :token WHERE id_usuario = :id", nativeQuery = true)
 	void guardarFcmToken(@Param("id") Integer id, @Param("token") String token);

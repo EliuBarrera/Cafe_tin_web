@@ -34,6 +34,9 @@ contenedor Docker. Lee primero el `CLAUDE.md` raíz (sección "Lo que hace la BD
 - Push (RF-08): `FIREBASE_CREDENTIALS` = JSON de la cuenta de servicio de Firebase o ruta al archivo
   (en Render, un *Secret File*). Sin ella, `EnvioPushLog` solo escribe el aviso en el log. No se usa
   `firebase-admin`: `EnvioPushFcm` llama a la API HTTP v1 con Nimbus y `RestClient`.
+- Correo de recuperación y push salen **después del commit y en otro hilo** (`EnviosEnSegundoPlano`,
+  `@Async` + `@TransactionalEventListener`). En los tests, espera el envío con `verify(mock, timeout(…))`,
+  `after(…).never()` o Awaitility: un `verify` directo puede correr antes que el envío.
 
 ## Código
 

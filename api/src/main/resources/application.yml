@@ -33,6 +33,15 @@ spring:
       mail.smtp.connectiontimeout: 5000
       mail.smtp.timeout: 5000
 
+  # Correos y push en segundo plano (EnviosEnSegundoPlano). Al apagar o redesplegar, se esperan los
+  # que estén en curso en vez de cortarlos.
+  task:
+    execution:
+      thread-name-prefix: envio-
+      shutdown:
+        await-termination: true
+        await-termination-period: 15s
+
   jpa:
     open-in-view: false
     hibernate:
