@@ -20,7 +20,14 @@ nunca en el repositorio ni en el chat del equipo.
 
 ## 2. Render: crear el servicio de la API
 
-**New → Web Service** desde el repositorio de GitHub:
+**Recomendado: Blueprint.** El servicio está descrito en `render.yaml`, en la raíz del repo (validado
+contra el esquema oficial de Render). En Render: **New → Blueprint** → este repositorio → rama `main`.
+Render crea `cafetin-api` con región, Docker, health check y variables ya puestas, genera un
+`JWT_SECRET` nuevo y solo te pide los valores marcados como secretos: `DB_URL`, `DB_USER`,
+`DB_PASSWORD` y los de correo (`SPRING_MAIL_HOST` = `smtp.gmail.com`, o vacío si aún no tienes la
+cuenta). Después sigue en el paso 3; las tablas de abajo describen lo mismo por si lo creas a mano.
+
+**A mano: New → Web Service** desde el repositorio de GitHub:
 
 | Campo | Valor |
 |---|---|
@@ -113,15 +120,27 @@ Si el `INSERT` falla, `BEGIN … COMMIT` evita que quede un `usuario` sin su fil
 ## 4. Probar la API
 
 ```bash
+api/scripts/verificar-despliegue.sh https://<servicio>.onrender.com
+```
+
+Revisa sin modificar nada: health check, conexión a Neon, que la seguridad responda 401, CORS para
+el panel, Swagger apagado y HTTPS. Termina con "Todo en orden" o dice qué falló. Si Render dormía la
+API, espera a que despierte (puede tardar unos minutos).
+
+Para confirmar el dueño, inicia sesión con su correo:
+
+```bash
 curl -s -X POST https://<servicio>.onrender.com/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"correo":"<correo del dueño>","contrasena":"<su contraseña>"}'
 ```
 
-Debe responder un JSON con `token` y `"rol":"DUENO"`. La primera petición puede tardar: el plan
-gratuito de Render apaga el servicio sin tráfico y Neon suspende la base.
+Debe responder un JSON con `token` y `"rol":"DUENO"`.
 
 ## 5. Vercel: apuntar el panel a la API
+
+El proyecto ya existe (`guepardev-s/cafe-tin-web`) y publica `main` en
+`https://cafe-tin-web.vercel.app`, pero hasta este paso apunta a `localhost:8080`.
 
 1. Vercel → proyecto del panel → **Settings → Environment Variables**:
    `VITE_API_URL=https://<servicio>.onrender.com`.
@@ -130,6 +149,18 @@ gratuito de Render apaga el servicio sin tráfico y Neon suspende la base.
 
 Si el navegador muestra un error de CORS, revisa que `CORS_ORIGINS` en Render tenga exactamente el
 dominio de Vercel, con `https://` y sin `/` al final.
+
+## 6. Datos de la demo
+
+```bash
+python3 api/scripts/datos_demo.py https://<servicio>.onrender.com --dueno <correo del dueño> --ventas 12
+```
+
+Crea, a través de la API, 4 categorías, 2 proveedores, 13 productos (uno agotado y otro bajo el
+mínimo, para mostrar las alertas), 2 trabajadores y 5 estudiantes; con `--ventas` también pedidos
+pagados para que los reportes tengan datos. Pide la contraseña del dueño y una contraseña para las
+cuentas de demo, sin mostrarlas, y al final lista los correos. Si lo corres dos veces no duplica nada.
+Solo necesita Python 3, sin librerías extra.
 
 ## Después de desplegar
 
