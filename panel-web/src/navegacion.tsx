@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import type { Rol } from './api/tipos'
+import { Despacho } from './paginas/Despacho'
 import { Pendiente } from './paginas/Pendiente'
 
 interface Seccion {
@@ -17,7 +18,7 @@ const SOLO_DUENO: Rol[] = ['DUENO']
  * El rol de cada sección debe coincidir con las reglas de la API (SecurityConfig).
  */
 export const SECCIONES: Seccion[] = [
-  { ruta: 'despacho', titulo: 'Despacho', roles: ['TRABAJADOR', 'DUENO'], pagina: <Pendiente titulo="Despacho" /> },
+  { ruta: 'despacho', titulo: 'Despacho', roles: ['TRABAJADOR', 'DUENO'], pagina: <Despacho /> },
   { ruta: 'productos', titulo: 'Productos', roles: SOLO_DUENO, pagina: <Pendiente titulo="Productos" /> },
   { ruta: 'categorias', titulo: 'Categorías', roles: SOLO_DUENO, pagina: <Pendiente titulo="Categorías" /> },
   { ruta: 'proveedores', titulo: 'Proveedores', roles: SOLO_DUENO, pagina: <Pendiente titulo="Proveedores" /> },
