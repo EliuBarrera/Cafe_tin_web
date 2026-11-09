@@ -4,6 +4,7 @@ import type { Rol } from './api/tipos'
 import { Despacho } from './paginas/Despacho'
 import { Pendiente } from './paginas/Pendiente'
 import { Productos } from './paginas/Productos'
+import { Reportes } from './paginas/Reportes'
 
 interface Seccion {
   ruta: string
@@ -24,7 +25,7 @@ export const SECCIONES: Seccion[] = [
   { ruta: 'categorias', titulo: 'Categorías', roles: SOLO_DUENO, pagina: <Pendiente titulo="Categorías" /> },
   { ruta: 'proveedores', titulo: 'Proveedores', roles: SOLO_DUENO, pagina: <Pendiente titulo="Proveedores" /> },
   { ruta: 'alertas', titulo: 'Alertas', roles: SOLO_DUENO, pagina: <Pendiente titulo="Alertas" /> },
-  { ruta: 'reportes', titulo: 'Reportes', roles: SOLO_DUENO, pagina: <Pendiente titulo="Reportes" /> },
+  { ruta: 'reportes', titulo: 'Reportes', roles: SOLO_DUENO, pagina: <Reportes /> },
   { ruta: 'trabajadores', titulo: 'Trabajadores', roles: SOLO_DUENO, pagina: <Pendiente titulo="Trabajadores" /> },
 ]
 

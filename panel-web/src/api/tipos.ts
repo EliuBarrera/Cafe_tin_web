@@ -27,6 +27,13 @@ export type Proveedor = Required<Omit<Esquemas['ProveedorResponse'], 'correo' | 
   direccion: string | null
 }
 
+// Ingresos del dueño (RF-20 a RF-22). Solo cuentan pagos PAGADO.
+export type Periodo = 'DIA' | 'SEMANA' | 'MES'
+export type IngresoPeriodo = Required<Esquemas['IngresoPeriodoResponse']>
+export type ProductoVendido = Required<Esquemas['ProductoVendidoResponse']>
+export type Venta = Required<Esquemas['VentaResponse']>
+export type PaginaVentas = Required<Omit<Esquemas['PaginaVentaResponse'], 'contenido'>> & { contenido: Venta[] }
+
 // Despacho (RF-10 a RF-14). `trabajador` es nulo hasta que alguien confirma el pedido.
 export type LineaDespacho = Required<Esquemas['LineaDespachoResponse']>
 export type PedidoDespacho = Required<Omit<Esquemas['PedidoDespachoResponse'], 'trabajador' | 'items'>> & {
