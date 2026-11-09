@@ -1,6 +1,6 @@
 # API — reglas del backend
 
-Spring Boot 4.1 · Java 21 · Maven · PostgreSQL 16 (Neon) · Flyway. Se despliega en Render como
+Spring Boot 4.1 · Java 25 · Maven · PostgreSQL 16 (Neon) · Flyway. Se despliega en Render como
 contenedor Docker. Lee primero el `CLAUDE.md` raíz (sección "Lo que hace la BD").
 
 ## Migraciones

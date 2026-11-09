@@ -76,7 +76,7 @@ gestion-cafetin/
 ├── .env.example               variables: conexión a Neon, JWT, CORS (sin secretos reales)
 ├── .github/workflows/api.yml  CI: ./mvnw verify en cada PR
 ├── docs/                      análisis, diagramas, openapi.yaml, matriz de trazabilidad
-├── api/                       Spring Boot 4.1 · Java 21 · Maven
+├── api/                       Spring Boot 4.1 · Java 25 · Maven
 │   ├── CLAUDE.md              reglas del backend
 │   └── src/main/resources/db/migration/   V1 esquema, V2 datos, V3…
 ├── panel-web/                 React 18 + TypeScript (Vite)
@@ -228,7 +228,7 @@ Hecho cuando: cada integrante tiene su rama en Neon y su `.env` local, y conecta
 
 Al cerrar Diseño, la API arranca contra PostgreSQL con las 14 entidades validadas por Hibernate (`ddl-auto: validate`) y el contrato OpenAPI queda congelado para que app y panel empiecen en paralelo.
 
-- [x] Proyecto Spring Boot 4.1 (Java 21) con Web, Data JPA, Validation, Security, driver PostgreSQL, Flyway, springdoc-openapi y Testcontainers.
+- [x] Proyecto Spring Boot 4.1 (Java 25) con Web, Data JPA, Validation, Security, driver PostgreSQL, Flyway, springdoc-openapi y Testcontainers.
 - [x] `application.yml` con perfiles `dev`, `test` y `prod`: `ddl-auto: validate`, `default_schema: cafetin`, `stringtype=unspecified` y `currentSchema=cafetin` en cada conexión; V2 (datos de prueba) solo en `dev`. **PR 1.**
 - [x] Paquetes por módulo (con `package-info.java`; las capas se crean al implementar) y, dentro de cada uno, capas `controller` / `service` / `repository` / `dto`: `cuentas`, `catalogo`, `pedidos`, `despacho`, `inventario`, `reportes`, `comun`. Así se ven los cinco paquetes del análisis y la arquitectura en capas que hay que sustentar.
 - [x] **PR 2.** Entidades (en `<modulo>.modelo`): `Usuario` abstracta (JOINED, discriminador `tipo_usuario`) con `Estudiante`, `Trabajador`, `Dueno`; `Notificacion` (JOINED) con `AlertaStock`; `Categoria`, `Proveedor`, `Producto`, `Inventario` (1:1), `Pedido`, `DetallePedido`, `Pago` (1:1), `Recibo` (1:1).

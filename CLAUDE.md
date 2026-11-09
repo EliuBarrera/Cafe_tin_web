@@ -9,7 +9,7 @@ Actores: **Estudiante** (pide, paga, recoge) · **Trabajador** (despacha) · **D
 ## Estructura del repo
 
 ```
-api/           Spring Boot 4.1 · Java 21 · Maven · PostgreSQL 16 · Flyway
+api/           Spring Boot 4.1 · Java 25 · Maven · PostgreSQL 16 · Flyway
 panel-web/     React 18 + TypeScript (Vite) · React Router · TanStack Query
 app-android/   Kotlin + Jetpack Compose · MVVM · Retrofit · DataStore
 docs/          openapi.yaml (contrato), trazabilidad.md, análisis y diagramas
@@ -174,6 +174,7 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 02/11/2026 · Solo se cancelan pedidos sin pagar; no hay reembolsos en la v1 · evita reponer stock y el flujo `REEMBOLSADO`.
 - 02/11/2026 · JWT con `spring-boot-starter-security-oauth2-resource-server` (HS256, 8 h; `sub` = id, `rol` = tipo) · oficial de Spring, Boot gestiona la versión y evita un filtro propio.
 - 08/11/2026 · Flyway con `out-of-order: true` · con rangos por módulo, una V3 creada después de aplicar la V10 se rechazaría; así se aplica igual. Una migración no debe depender de otra de un rango mayor que aún no esté en `main`.
+- 08/11/2026 · Java 25 (LTS) para la API, en vez de Java 21 · es la LTS más reciente y Spring Boot 4.1 la soporta. Cada integrante necesita un JDK 25 local para `./mvnw verify` (`sudo apt install openjdk-25-jdk` en Ubuntu 24.04); el CI y el `Dockerfile` usan Temurin 25.
 
 ## Qué no hacer
 

@@ -1,7 +1,7 @@
 # Imagen de la API para Render (Root Directory: api). Ver "Despliegue" en el plan.
 
 # --- Compilar ---
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
@@ -11,7 +11,7 @@ COPY src src
 RUN ./mvnw -q -B package -DskipTests
 
 # --- Ejecutar ---
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 RUN useradd --system --no-create-home cafetin
 COPY --from=build /app/target/cafetin-api-*.jar app.jar
