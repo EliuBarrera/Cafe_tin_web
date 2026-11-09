@@ -34,9 +34,9 @@ Los tests de la API están en `api/src/test/java/pe/edu/ucv/cafetin/`; los del p
 | RF-17 | Alerta de stock mínimo | `TriggersTest.alertaSoloAlCruzarElMinimoYAlAgotarse` · prueba de carga (una alerta por producto) · panel `componentes/ContadorAlertas.test.tsx` (5) | ✅ en la base y contador del panel | 🟡 falta `/api/alertas` en la API (hoy 501; el contador espera sin consultar de más) |
 | RF-18 | Recarga de stock | — | — | ❌ |
 | RF-19 | Alta, edición y baja | `ProductoIntegracionTest` (editar, deshabilitar, habilitar) | ✅ API (PR #14) | 🟡 faltan las pantallas del dueño |
-| RF-20 | Registrar venta | Cada pago `PAGADO` es la venta: `PagoPedidoIntegracionTest.montoEsElTotalDelPedido` | ✅ registro | 🟡 falta el reporte de ventas |
-| RF-21 | Ingresos día/semana/mes | — | — | ❌ |
-| RF-22 | Más vendidos | — | — | ❌ |
+| RF-20 | Registrar venta | Cada pago `PAGADO` es la venta: `PagoPedidoIntegracionTest.montoEsElTotalDelPedido` · `reportes/ReporteIntegracionTest` (rango, orden, paginación, 30 días por defecto) | ✅ registro y `/api/reportes/ventas` | 🟡 falta la pantalla del dueño |
+| RF-21 | Ingresos día/semana/mes | `ReporteIntegracionTest` (día, semana desde lunes, mes, solo `PAGADO`, rango inválido 400) | ✅ API | 🟡 falta la pantalla del dueño |
+| RF-22 | Más vendidos | `ReporteIntegracionTest.masVendidosOrdenaPorUnidadesYSoloCuentaPagados`, límite 400 | ✅ API | 🟡 falta la pantalla del dueño |
 
 ## Requisitos no funcionales
 

@@ -302,7 +302,7 @@ class AuthIntegracionTest {
 	void duenoEntraAReportesYDespacho() throws Exception {
 		String dueno = bearer(crearDueno());
 
-		mvc.perform(get("/api/reportes/ventas").header(HttpHeaders.AUTHORIZATION, dueno)).andExpect(status().isNotImplemented());
+		mvc.perform(get("/api/reportes/ventas").header(HttpHeaders.AUTHORIZATION, dueno)).andExpect(status().isOk());
 		mvc.perform(get("/api/despacho/pedidos").header(HttpHeaders.AUTHORIZATION, dueno)).andExpect(status().isOk());
 	}
 
