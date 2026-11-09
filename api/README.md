@@ -65,6 +65,8 @@ datos de prueba). En local las variables se leen de `../.env` (ver [`.env.exampl
 ```bash
 ./mvnw spring-boot:run   # http://localhost:8080 · Swagger en /swagger-ui.html
 ./mvnw verify            # tests con Testcontainers (PostgreSQL 16 real; requiere Docker)
+./mvnw verify            # además mide cobertura (JaCoCo): falla si un *.service baja de 90 % líneas / 75 % ramas
+                         # reporte en target/site/jacoco/index.html
 ```
 
 Scripts en [`scripts/`](scripts/): `hash-contrasena.sh` (BCrypt para el primer dueño),

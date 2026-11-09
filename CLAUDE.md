@@ -179,6 +179,7 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 08/11/2026 · Recuperación de contraseña por correo con `spring-boot-starter-mail` (SMTP de Gmail en Render) · sin un envío real, RF-03 no funcionaba en producción. Sin `SPRING_MAIL_HOST` se usa el log, solo en dev.
 - 08/11/2026 · Push por la API HTTP v1 de FCM sin `firebase-admin` (JWT RS256 con Nimbus y `RestClient`) · el SDK suma decenas de librerías y memoria en el plan de 512 MB de Render; Nimbus ya viene con la seguridad.
 - 09/11/2026 · `search_path` con `options=-c search_path=cafetin` en vez de `currentSchema` · Neon ignora `currentSchema` y las conexiones quedaban en `public`: fallaban los triggers (crear pedido, pagar, editar inventario) y las consultas nativas. Testcontainers sí lo respeta; `SearchPathTest` fija la configuración.
+- 09/11/2026 · Cobertura con el plugin `jacoco-maven-plugin` (solo build, no entra en la imagen): `verify` falla si un paquete `*.service` baja de 90 % de líneas o 75 % de ramas · Fase 6 pedía un umbral verificado en CI; se fijó algo por debajo de lo medido (mínimo 94 % y 80 %) para que frene caídas reales sin romper por cambios pequeños. Reporte en `api/target/site/jacoco/index.html`.
 
 ## Qué no hacer
 

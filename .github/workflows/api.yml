@@ -37,3 +37,12 @@ jobs:
       - name: Tests
         if: steps.proyecto.outputs.existe == 'true'
         run: ./mvnw -B verify
+
+      # Reporte de cobertura de JaCoCo (el umbral ya lo aplica `verify`); se guarda aunque fallen los tests.
+      - name: Reporte de cobertura
+        if: always() && steps.proyecto.outputs.existe == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-jacoco
+          path: api/target/site/jacoco/
+          if-no-files-found: ignore
