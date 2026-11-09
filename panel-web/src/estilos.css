@@ -539,3 +539,53 @@ a:focus-visible {
   background: #e6f2e8;
   border-radius: 8px;
 }
+
+/* Alertas de stock */
+.lista-alertas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tarjeta-alerta {
+  display: grid;
+  gap: 0.5rem;
+  height: 100%;
+  padding: 1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+}
+
+.tarjeta-alerta p {
+  margin: 0;
+}
+
+.tarjeta-alerta-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  align-items: center;
+}
+
+.tarjeta-alerta-cabecera h2 {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tarjeta-alerta-cabecera .insignia {
+  margin: 0;
+}
+
+.tarjeta-alerta a {
+  color: var(--acento);
+}
+
+.enlace-accion {
+  align-self: center;
+  font-weight: 600;
+}
