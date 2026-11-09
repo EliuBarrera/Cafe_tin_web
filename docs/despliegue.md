@@ -28,7 +28,7 @@ nunca en el repositorio ni en el chat del equipo.
 | Runtime | Docker |
 | Branch | `main` |
 | Region | Ohio (la misma región que Neon) |
-| Health Check Path | vacío por ahora (ver la nota de abajo) |
+| Health Check Path | `/actuator/health/liveness` |
 
 Variables de entorno (**Environment**):
 
@@ -44,9 +44,10 @@ Variables de entorno (**Environment**):
 
 No reutilices el `JWT_SECRET` de tu `.env`: si se filtra, cualquiera puede firmar tokens de dueño.
 
-**Health check:** la API no incluye Spring Boot Actuator, así que `/actuator/health` cae en "cualquier
-otra ruta → denegada" y responde 401: Render marcaría el despliegue como fallido. Con el campo vacío, Render solo comprueba que el puerto
-responda. Si el equipo aprueba agregar `spring-boot-starter-actuator`, se pone `/actuator/health`.
+**Health check:** `/actuator/health/liveness` responde `{"status":"UP"}` sin token. No consulta la base
+a propósito: Render lo llama cada pocos segundos y, si tocara Neon, la base nunca se suspendería y se
+gastaría la cuota gratuita. `/actuator/health` (sin `/liveness`) sí revisa la conexión a Neon: sirve para
+diagnosticar a mano, no para Render.
 
 Al primer arranque, Flyway crea el esquema `cafetin` en Neon `main` con las migraciones de
 `db/migration` (V1, V10…). El perfil `prod` **no** carga los datos de prueba (V2): la base queda vacía.
@@ -114,4 +115,3 @@ dominio de Vercel, con `https://` y sin `/` al final.
 
 - **Recuperar contraseña (RF-03) no envía nada en producción:** `EnvioRecuperacionLog` solo escribe
   el enlace en el log y en `prod` está desactivado. Falta un envío real (por ejemplo, correo).
-- **Health check:** depende de agregar Actuator (ver paso 2).
