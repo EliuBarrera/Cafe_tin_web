@@ -1,0 +1,45 @@
+# Blueprint de Render para la API (Fase 7). En Render: New → Blueprint → este repositorio.
+# Render crea el servicio con esta configuración y pide al crear los valores marcados con
+# `sync: false`. Nunca escribas aquí contraseñas ni secretos. Pasos completos: docs/despliegue.md.
+services:
+  - type: web
+    name: cafetin-api
+    runtime: docker
+    plan: free
+    region: ohio                      # la misma región que Neon (AWS us-east-2)
+    branch: main
+    dockerContext: ./api
+    dockerfilePath: ./api/Dockerfile
+    healthCheckPath: /actuator/health/liveness
+    buildFilter:
+      paths:
+        - api/**                      # cambios solo del panel o de docs no redesplegan la API
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        generateValue: true           # Render genera uno aleatorio; no reutilices el de tu .env
+      - key: DB_URL                   # conexión directa (sin -pooler) a la rama main de Neon
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://cafe-tin-web.vercel.app
+      - key: CAFETIN_RECUPERACION_ENLACEBASE
+        value: https://cafe-tin-web.vercel.app/restablecer?token=
+      # Correo de recuperación (RF-03): smtp.gmail.com cuando tengas la cuenta. Vacío = el enlace no
+      # se envía, pero la API arranca igual.
+      - key: SPRING_MAIL_HOST
+        sync: false
+      - key: SPRING_MAIL_PORT
+        value: "587"
+      - key: SPRING_MAIL_USERNAME
+        sync: false
+      - key: SPRING_MAIL_PASSWORD     # contraseña de aplicación de Gmail
+        sync: false
+      # Push (RF-08): el JSON de Firebase va como Secret File "firebase.json" (Environment → Secret
+      # Files), que Render monta en /etc/secrets. Mientras no exista, deja esta variable sin crear.
+      # - key: FIREBASE_CREDENTIALS
+      #   value: /etc/secrets/firebase.json

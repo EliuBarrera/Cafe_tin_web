@@ -16,7 +16,7 @@ Los tests de la API están en `api/src/test/java/pe/edu/ucv/cafetin/`; los del p
 | RF | Requisito | Pruebas | Resultado | Estado |
 |---|---|---|---|---|
 | RF-01 | Registro y login del estudiante | `cuentas/AuthIntegracionTest` (26: registro, BCrypt, duplicados → 409, login, contraseña errónea → 401, JWT vencido o falso → 401) · panel `App.test.tsx` (login) | ✅ API y panel | 🟡 falta la app Android |
-| RF-02 | Trabajadores y dueño con roles | `cuentas/TrabajadorIntegracionTest` (8) · `AuthIntegracionTest` (reglas por rol) · `LoginDatosDevTest` (los 3 roles del seed) | ✅ | ✅ |
+| RF-02 | Trabajadores y dueño con roles | `cuentas/TrabajadorIntegracionTest` (8) · `AuthIntegracionTest` (reglas por rol) · `LoginDatosDevTest` (los 3 roles del seed) · panel `paginas/Trabajadores.test.tsx` (5) | ✅ API y panel | ✅ |
 | RF-03 | Recuperar contraseña | `cuentas/RecuperacionIntegracionTest` (10: hash, expiración, un solo uso) · `EnvioRecuperacionCorreoTest` (3) · `EnvioRecuperacionSeleccionTest` (2) · `EnvioRecuperacionLogTest` (2) · panel `App.test.tsx` (`/recuperar`, `/restablecer`) · prueba manual con Mailpit (08/11) | ✅ | ✅ |
 | RF-04 | Catálogo | `catalogo/CatalogoIntegracionTest` (4) · `inventario/CategoriaProveedorIntegracionTest` (lectura de categorías) | ✅ API | 🟡 falta la app Android |
 | RF-05 | Carrito / crear pedido | `pedidos/CrearPedidoIntegracionTest` (13: total, precio del momento, stock, repetidos, sin ítems) | ✅ API | 🟡 falta la app Android |
