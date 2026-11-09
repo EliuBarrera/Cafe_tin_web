@@ -25,6 +25,14 @@ spring:
         # triggers usan nombres sin esquema (pedido, inventario…) y fallarían con 'public'.
         currentSchema: cafetin
 
+  # Correo de recuperación (RF-03): solo se activa si existe SPRING_MAIL_HOST (Render); ver .env.example.
+  mail:
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+
   jpa:
     open-in-view: false
     hibernate:
@@ -48,6 +56,8 @@ cafetin:
     minutos: 30
     enlace-base: http://localhost:5173/restablecer?token=
     registrar-enlace: false           # true solo en dev: escribe el token en el log
+  correo:
+    remitente: ${MAIL_FROM:}          # vacío = la cuenta SMTP (spring.mail.username)
 
 springdoc:
   swagger-ui:
