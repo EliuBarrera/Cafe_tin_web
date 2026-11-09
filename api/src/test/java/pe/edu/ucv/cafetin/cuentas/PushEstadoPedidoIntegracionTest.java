@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -125,6 +126,33 @@ class PushEstadoPedidoIntegracionTest {
 		assertThat(jdbc.queryForObject("SELECT estado::text FROM pedido WHERE id_pedido = ?", String.class, id))
 				.isEqualTo("CONFIRMADO");
 		assertThat(tiposGuardados(id)).containsExactly("PEDIDO_CONFIRMADO");
+	}
+
+	@Test
+	void unTokenQueFcmYaNoReconoceSeBorraDelUsuario() throws Exception {
+		guardarToken(TOKEN);
+		doThrow(new EnvioPush.TokenInvalido("UNREGISTERED")).when(envio).enviar(anyString(), any());
+		int id = pedidoPagado();
+
+		accion(id, "confirmar").andExpect(status().isOk());
+
+		assertThat(jdbc.queryForObject("SELECT fcm_token FROM usuario WHERE id_usuario = ?", String.class, estudiante))
+				.isNull();
+	}
+
+	@Test
+	void siElTelefonoYaRegistroOtroTokenNoSeBorraElNuevo() throws Exception {
+		guardarToken(TOKEN);
+		doAnswer(invocacion -> {
+			guardarToken("token-nuevo-del-telefono"); // la app lo renovó mientras se enviaba el aviso
+			throw new EnvioPush.TokenInvalido("UNREGISTERED");
+		}).when(envio).enviar(anyString(), any());
+		int id = pedidoPagado();
+
+		accion(id, "confirmar").andExpect(status().isOk());
+
+		assertThat(jdbc.queryForObject("SELECT fcm_token FROM usuario WHERE id_usuario = ?", String.class, estudiante))
+				.isEqualTo("token-nuevo-del-telefono");
 	}
 
 	// ------------------------------------------------------------------ ayudas

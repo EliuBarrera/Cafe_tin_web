@@ -359,7 +359,7 @@ El estudiante recibe un push cuando su pedido pasa a confirmado, listo o entrega
 - [x] `usuario.fcm_token` ya está en V1: no hace falta migración.
 - [ ] App: registrar el token tras el login (`PUT /api/usuarios/me/fcm-token`) y pedir el permiso de notificaciones en Android 13 o superior.
 - [x] API: el despacho guarda la fila en `notificacion` y publica `PedidoEstadoCambiado` (`comun.evento`); `NotificacionPush` lo envía después del commit (`@TransactionalEventListener`, `AFTER_COMMIT`), así no se notifica un cambio revertido. El envío va detrás de `EnvioPush`: hoy `EnvioPushLog` lo escribe en el log.
-- [ ] Implementación de `EnvioPush` con Firebase Admin SDK (falta el proyecto de Firebase y aprobar la dependencia `firebase-admin`).
+- [x] `EnvioPushFcm`: API HTTP v1 de FCM sin el SDK de Firebase (JWT RS256 firmado con Nimbus y token OAuth de Google en caché). Se activa con `FIREBASE_CREDENTIALS`; si FCM responde `UNREGISTERED`, se borra el token del usuario. `EnvioPushFcmTest` simula Google y FCM con un servidor local.
 - [ ] Panel: contador de alertas de stock para el dueño (polling).
 - [ ] Respaldo si FCM se retrasa: la app consulta sus notificaciones de la tabla al abrirse.
 - [ ] Opcional si sobra tiempo: SSE en `/api/despacho/stream` para reemplazar el polling del panel.

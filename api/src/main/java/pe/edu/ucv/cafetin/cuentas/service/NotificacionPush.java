@@ -35,6 +35,9 @@ public class NotificacionPush {
 		}
 		try {
 			envio.enviar(token, aviso);
+		} catch (EnvioPush.TokenInvalido e) {
+			usuarios.quitarFcmToken(aviso.idUsuario(), token);
+			log.info("Token de push del usuario {} borrado: {}", aviso.idUsuario(), e.getMessage());
 		} catch (RuntimeException e) {
 			log.warn("No se pudo enviar el push del pedido {} al usuario {}: {}", aviso.idPedido(), aviso.idUsuario(),
 					e.getMessage());
