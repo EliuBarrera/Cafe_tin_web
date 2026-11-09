@@ -12,14 +12,23 @@ import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import pe.edu.ucv.cafetin.comun.error.ApiException;
+import pe.edu.ucv.cafetin.cuentas.seguridad.UsuarioActual;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.AlertaResponse;
+import pe.edu.ucv.cafetin.inventario.service.AlertaService;
 
-/** Alertas de stock que genera la base (RF-17). Responsable: Maria Elizabeth Ruiz. */
+/** Alertas de stock que genera la base (RF-17). Cada dueño ve solo las suyas. Responsable: Eliú Barrera. */
 @RestController
 @RequestMapping("/api/alertas")
 @Tag(name = "Inventario")
 public class AlertaController {
+
+	private final AlertaService servicio;
+	private final UsuarioActual usuarioActual;
+
+	public AlertaController(AlertaService servicio, UsuarioActual usuarioActual) {
+		this.servicio = servicio;
+		this.usuarioActual = usuarioActual;
+	}
 
 	@GetMapping
 	@Operation(summary = "Listar alertas de stock", description = """
@@ -28,13 +37,13 @@ public class AlertaController {
 	public List<AlertaResponse> listar(
 			@Parameter(description = "false = solo pendientes (por defecto); true = solo atendidas")
 			@RequestParam(defaultValue = "false") boolean atendida) {
-		throw new ApiException.NoImplementado("RF-17");
+		return servicio.listar(usuarioActual.id(), atendida);
 	}
 
 	@PatchMapping("/{id}/atendida")
 	@Operation(summary = "Marcar alerta como atendida", description = "DUENO · RF-17")
 	public AlertaResponse marcarAtendida(@PathVariable Integer id) {
-		throw new ApiException.NoImplementado("RF-17");
+		return servicio.marcarAtendida(id, usuarioActual.id());
 	}
 
 }

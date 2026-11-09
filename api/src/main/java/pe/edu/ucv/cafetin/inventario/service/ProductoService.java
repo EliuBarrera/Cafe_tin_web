@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.comun.error.CodigoError;
+import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.InventarioResponse;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.ProductoActualizarRequest;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.ProductoRequest;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.ProductoResponse;
@@ -14,14 +15,15 @@ import pe.edu.ucv.cafetin.inventario.modelo.Categoria;
 import pe.edu.ucv.cafetin.inventario.modelo.Inventario;
 import pe.edu.ucv.cafetin.inventario.modelo.Producto;
 import pe.edu.ucv.cafetin.inventario.modelo.Proveedor;
+import pe.edu.ucv.cafetin.inventario.repository.AlertaStockRepository;
 import pe.edu.ucv.cafetin.inventario.repository.CategoriaRepository;
 import pe.edu.ucv.cafetin.inventario.repository.InventarioRepository;
 import pe.edu.ucv.cafetin.inventario.repository.ProductoRepository;
 import pe.edu.ucv.cafetin.inventario.repository.ProveedorRepository;
 
 /**
- * Productos del dueño: alta con stock inicial (RF-15) y ver, editar y deshabilitar (RF-19).
- * El stock solo cambia con la venta (trigger) o la recarga (RF-18); aquí solo se fija el inicial y el mínimo.
+ * Productos del dueño: alta con stock inicial (RF-15), recarga (RF-18) y ver, editar y deshabilitar (RF-19).
+ * El stock solo cambia con la venta (trigger) o la recarga; la edición solo toca el mínimo.
  */
 @Service
 public class ProductoService {
@@ -30,13 +32,15 @@ public class ProductoService {
 	private final InventarioRepository inventarios;
 	private final CategoriaRepository categorias;
 	private final ProveedorRepository proveedores;
+	private final AlertaStockRepository alertas;
 
 	public ProductoService(ProductoRepository productos, InventarioRepository inventarios,
-			CategoriaRepository categorias, ProveedorRepository proveedores) {
+			CategoriaRepository categorias, ProveedorRepository proveedores, AlertaStockRepository alertas) {
 		this.productos = productos;
 		this.inventarios = inventarios;
 		this.categorias = categorias;
 		this.proveedores = proveedores;
+		this.alertas = alertas;
 	}
 
 	@Transactional(readOnly = true)
@@ -99,6 +103,20 @@ public class ProductoService {
 		Inventario inventario = inventarioDe(id);
 		inventario.getProducto().setActivo(activo);
 		return aRespuesta(inventario);
+	}
+
+	/**
+	 * RF-18. Suma unidades (también a un producto deshabilitado) y da por atendidas las alertas abiertas
+	 * del producto. Subir el stock no genera alertas: el trigger solo alerta al bajar.
+	 */
+	@Transactional
+	public InventarioResponse recargar(Integer idProducto, int cantidad) {
+		Integer idInventario = inventarioDe(idProducto).getId();
+		inventarios.recargar(idProducto, cantidad);
+		alertas.atenderDeInventario(idInventario);
+		Inventario i = inventarioDe(idProducto); // releído: la suma y la fecha las hizo la base
+		return new InventarioResponse(idProducto, i.getProducto().getNombre(), i.getCantidadDisponible(),
+				i.getStockMinimo(), i.getFechaActualizacion());
 	}
 
 	// ------------------------------------------------------------------ ayudas
