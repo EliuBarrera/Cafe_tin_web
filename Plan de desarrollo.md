@@ -169,7 +169,7 @@ Así cada responsable puede explicar un flujo completo en la sustentación, la m
 1. `docs/openapi.yaml` congelado: los clientes trabajan contra el contrato aunque el endpoint devuelva 501.
 2. Entidades compartidas: cualquier cambio después de la Fase 1 va en un PR que revisa el dueño del módulo afectado.
 3. `SecurityConfig` y `application.yml` son de Lizca; los demás piden sus reglas por PR.
-4. Migraciones con números reservados: Lizca `V3`–`V9`, Eliú `V10`–`V19`, Maria `V20`–`V29`. Dos `V3` en ramas distintas rompen Flyway.
+4. Migraciones con números reservados: Lizca `V3`–`V9`, Eliú `V10`–`V19`, Maria `V20`–`V29`. Dos `V3` en ramas distintas rompen Flyway. Como una versión menor puede llegar después de una mayor (V3 tras V10), Flyway corre con `out-of-order: true` (decidido el 08/11).
 5. Evento `PedidoEstadoCambiado` en `comun`: lo publica Eliú y lo consume Lizca.
 6. Formato de error `{codigo, mensaje, detalles}` y `@RestControllerAdvice` en `comun`: se crean en la Fase 1 y no los cambia cada módulo.
 7. El seed (`V2`) es la fuente de datos común: corregirlo primero (punto 19 del Análisis).

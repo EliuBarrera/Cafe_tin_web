@@ -37,6 +37,9 @@ spring:
     schemas: cafetin                  # crea el esquema y fija el search_path
     default-schema: cafetin
     locations: classpath:db/migration
+    # Cada módulo numera en su rango (Lizca V3–V9, Eliú V10–V19, Maria V20–V29): una V3 que llega
+    # después de la V10 se aplica igual en vez de rechazarse.
+    out-of-order: true
 
 cafetin:
   jwt:

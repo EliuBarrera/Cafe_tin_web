@@ -173,6 +173,7 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 02/11/2026 · Sin pago en `EFECTIVO` en la v1: la API acepta YAPE, PLIN y TARJETA · en efectivo el stock no se reservaba y el despacho no veía esos pedidos. Pendiente: actualizar CU-02 del informe.
 - 02/11/2026 · Solo se cancelan pedidos sin pagar; no hay reembolsos en la v1 · evita reponer stock y el flujo `REEMBOLSADO`.
 - 02/11/2026 · JWT con `spring-boot-starter-security-oauth2-resource-server` (HS256, 8 h; `sub` = id, `rol` = tipo) · oficial de Spring, Boot gestiona la versión y evita un filtro propio.
+- 08/11/2026 · Flyway con `out-of-order: true` · con rangos por módulo, una V3 creada después de aplicar la V10 se rechazaría; así se aplica igual. Una migración no debe depender de otra de un rango mayor que aún no esté en `main`.
 
 ## Qué no hacer
 

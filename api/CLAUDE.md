@@ -10,6 +10,8 @@ contenedor Docker. Lee primero el `CLAUDE.md` raíz (sección "Lo que hace la BD
   `spring.flyway.locations: classpath:db/migration,classpath:db/datos-dev`.
   Perfiles `test` y `prod` usan solo `classpath:db/migration`.
 - Flyway: `spring.flyway.schemas: cafetin` (crea el esquema y fija el `search_path`).
+- `spring.flyway.out-of-order: true`: los rangos por módulo hacen que lleguen versiones menores
+  después de mayores (una V3 tras la V10). No lo quites; `MigracionesTest` lo comprueba.
 - Nunca edites una migración aplicada. Usa el rango de tu módulo (ver "Qué no hacer" en el raíz)
   y pregunta antes de crearla.
 - Contraseña de todos los usuarios del seed: `Cafetin2026`.
