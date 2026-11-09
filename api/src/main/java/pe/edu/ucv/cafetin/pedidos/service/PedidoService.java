@@ -103,7 +103,8 @@ public class PedidoService {
 	 * RF-06, RF-07, RF-16. El pago se guarda PENDIENTE y luego pasa a PAGADO: ese UPDATE dispara
 	 * {@code trg_descontar_stock}. Si el stock no alcanza, el CHECK de la base lanza
 	 * {@code DataIntegrityViolationException} (409 STOCK_INSUFICIENTE) y se revierte todo.
-	 * Un rechazo de la pasarela no revierte: el pago queda FALLIDO y el reintento actualiza esa fila.
+	 * Un rechazo de la pasarela no revierte: el pago queda FALLIDO y el reintento actualiza esa fila,
+	 * con la fecha del intento nuevo.
 	 */
 	@Transactional(noRollbackFor = PagoRechazado.class)
 	public PedidoResponse pagar(Integer idEstudiante, Integer idPedido, MetodoPago metodo) {
@@ -126,7 +127,12 @@ public class PedidoService {
 			pago.setEstado(EstadoPago.PENDIENTE);
 			pago.setReferencia(null);
 		}
+		boolean reintento = pago.getId() != null;
 		pago = pagos.saveAndFlush(pago);
+		if (reintento) {
+			pagos.fecharAhora(pago.getId());
+			em.refresh(pago);
+		}
 
 		ResultadoCobro cobro = pasarela.cobrar(pedido.getCodigoPedido(), pago.getMonto(), metodo);
 		if (!cobro.aprobado()) {

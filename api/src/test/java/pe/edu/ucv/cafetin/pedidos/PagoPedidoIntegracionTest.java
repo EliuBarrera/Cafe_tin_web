@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static pe.edu.ucv.cafetin.soporte.DatosPrueba.como;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -162,6 +163,23 @@ class PagoPedidoIntegracionTest {
 		assertThat(filasPago(id)).isEqualTo(1);
 		assertThat(jdbc.queryForObject("SELECT id_pago FROM pago WHERE id_pedido = ?", Integer.class, id)).isEqualTo(idPago);
 		assertThat(datos.stock(cafe)).isEqualTo(8);
+	}
+
+	@Test
+	void elReintentoFechaElPagoEnElMomentoDelReintentoYNoEnElPrimerIntento() throws Exception {
+		// Si no, una venta reintentada otro día cuenta en el día del rechazo (RF-20, RF-21).
+		int cafe = datos.producto(cat, "2.50", 10);
+		int id = JsonPath.read(cuerpo(crear(estudiante, unItem(cafe, 1))), "$.id");
+		when(pasarela.cobrar(any(), any(), eq(MetodoPago.TARJETA))).thenReturn(ResultadoCobro.rechazado("Fondos insuficientes"));
+		pagar(estudiante, id, "TARJETA").andExpect(status().isPaymentRequired());
+		jdbc.update("UPDATE pago SET fecha = '2026-01-05 10:00' WHERE id_pedido = ?", id); // el rechazo fue hace días
+
+		String json = cuerpo(pagar(estudiante, id, "YAPE").andExpect(status().isOk()));
+
+		LocalDateTime enLaBase = jdbc.queryForObject("SELECT fecha FROM pago WHERE id_pedido = ?", LocalDateTime.class, id);
+		LocalDateTime ahora = jdbc.queryForObject("SELECT LOCALTIMESTAMP", LocalDateTime.class);
+		assertThat(enLaBase).isAfter(LocalDateTime.of(2026, 1, 5, 10, 0)).isBeforeOrEqualTo(ahora);
+		assertThat(LocalDateTime.parse(JsonPath.read(json, "$.pago.fecha"))).isEqualTo(enLaBase);
 	}
 
 	@Test
