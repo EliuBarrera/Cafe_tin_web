@@ -1,5 +1,10 @@
 package pe.edu.ucv.cafetin.app.datos
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.emptyFlow
+
 /** Operaciones de cuenta que usan las pantallas. Interfaz para probar los ViewModels sin red. */
 interface Cuentas {
     suspend fun login(correo: String, contrasena: String): Sesion
@@ -8,10 +13,20 @@ interface Cuentas {
     /** Sesión guardada y todavía válida, o null si no hay o la API la rechaza (401). */
     suspend fun sesionVigente(): Sesion?
     suspend fun cerrarSesion()
+    /** Emite cuando la API rechaza el JWT a mitad de uso (401): la app vuelve al login. */
+    val sesionRechazada: Flow<Unit> get() = emptyFlow()
 }
 
 /** RF-01 y RF-03 para el estudiante. Esta app es solo para estudiantes: otros roles usan el panel. */
 class CuentasRepositorio(private val api: ApiCafetin, private val almacen: AlmacenSesion) : Cuentas {
+
+    private val rechazos = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    override val sesionRechazada: SharedFlow<Unit> = rechazos
+
+    /** Lo llama el interceptor de [ClienteApi] (desde un hilo de OkHttp) ante un 401 con JWT. */
+    fun jwtRechazado() {
+        rechazos.tryEmit(Unit)
+    }
 
     override suspend fun login(correo: String, contrasena: String): Sesion {
         val respuesta = ClienteApi.llamar { api.login(LoginRequest(correo.trim(), contrasena)) }
@@ -22,7 +37,7 @@ class CuentasRepositorio(private val api: ApiCafetin, private val almacen: Almac
         iniciar(ClienteApi.llamar { api.registrar(datos) })
 
     override suspend fun recuperar(correo: String) {
-        ClienteApi.llamar { api.recuperar(RecuperarRequest(correo.trim())) }
+        ClienteApi.llamarSinCuerpo { api.recuperar(RecuperarRequest(correo.trim())) }
     }
 
     override suspend fun sesionVigente(): Sesion? {
@@ -42,7 +57,7 @@ class CuentasRepositorio(private val api: ApiCafetin, private val almacen: Almac
 
     /** RF-08: lo llamará la integración con Firebase cuando el proyecto exista. */
     suspend fun registrarTokenPush(token: String) {
-        ClienteApi.llamar { api.registrarFcmToken(FcmTokenRequest(token)) }
+        ClienteApi.llamarSinCuerpo { api.registrarFcmToken(FcmTokenRequest(token)) }
     }
 
     private suspend fun iniciar(respuesta: TokenResponse): Sesion {

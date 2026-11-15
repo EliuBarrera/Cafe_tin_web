@@ -38,7 +38,7 @@ private object Rutas {
 
 /**
  * Al abrir, revisa si hay una sesión guardada y vigente: si la hay va directo al inicio; si la API la
- * rechaza (token vencido o cuenta desactivada), al login.
+ * rechaza (token vencido o cuenta desactivada), al login. Lo mismo si la rechaza después, en cualquier pantalla.
  */
 @Composable
 fun AppCafetin(cuentas: Cuentas) {
@@ -58,6 +58,15 @@ fun AppCafetin(cuentas: Cuentas) {
     val alEntrar: (Sesion) -> Unit = { nueva ->
         sesion = nueva
         nav.navigate(Rutas.INICIO) { popUpTo(0) }
+    }
+    LaunchedEffect(cuentas) {
+        cuentas.sesionRechazada.collect {
+            cuentas.cerrarSesion()
+            if (sesion != null) {
+                sesion = null
+                nav.navigate(Rutas.LOGIN) { popUpTo(0) }
+            }
+        }
     }
 
     NavHost(nav, startDestination = if (sesion != null) Rutas.INICIO else Rutas.LOGIN) {

@@ -1,5 +1,8 @@
 package pe.edu.ucv.cafetin.app.datos
 
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -18,11 +21,12 @@ class CuentasRepositorioTest {
     private val servidor = MockWebServer()
     private val almacen = AlmacenEnMemoria()
     private lateinit var cuentas: CuentasRepositorio
+    private var jwtRechazados = 0
 
     @Before
     fun preparar() {
         servidor.start()
-        cuentas = CuentasRepositorio(ClienteApi.crear(servidor.url("/").toString(), almacen::tokenActual), almacen)
+        cuentas = CuentasRepositorio(ClienteApi.crear(servidor.url("/").toString(), almacen::tokenActual) { jwtRechazados++ }, almacen)
     }
 
     @After
@@ -78,6 +82,53 @@ class CuentasRepositorioTest {
             assertEquals("NO_AUTENTICADO", e.codigo)
             assertEquals("Correo o contraseña incorrectos", e.message)
         }
+        assertEquals("un 401 del login no es una sesión rechazada", 0, jwtRechazados)
+    }
+
+    @Test
+    fun un401ConJwtAMitadDeUsoAvisaQueLaSesionTermino() = runTest {
+        almacen.guardar(Sesion("jwt-de-ana", 4, "Ana", "ESTUDIANTE"))
+        servidor.enqueue(json(401, """{"codigo":"NO_AUTENTICADO","mensaje":"Inicia sesión","detalles":[]}"""))
+
+        try {
+            cuentas.registrarTokenPush("token-fcm")
+            fail("Debía fallar")
+        } catch (e: ErrorApi) {
+            assertEquals("NO_AUTENTICADO", e.codigo)
+        }
+        assertEquals(1, jwtRechazados)
+    }
+
+    @Test
+    fun un403ConJwtNoCierraLaSesion() = runTest {
+        almacen.guardar(Sesion("jwt-de-ana", 4, "Ana", "ESTUDIANTE"))
+        servidor.enqueue(json(403, """{"codigo":"ACCESO_DENEGADO","mensaje":"Sin permiso","detalles":[]}"""))
+
+        runCatching { cuentas.registrarTokenPush("token-fcm") }
+
+        assertEquals(0, jwtRechazados)
+    }
+
+    @Test
+    fun elJwtRechazadoLlegaALaPantallaPorSesionRechazada() = runTest {
+        val aviso = async(start = CoroutineStart.UNDISPATCHED) { cuentas.sesionRechazada.first() }
+
+        cuentas.jwtRechazado()
+
+        aviso.await() // si no emitiera, el test se colgaría y runTest lo cortaría
+    }
+
+    @Test
+    fun unaRespuestaIlegibleEsUnErrorYNoTumbaLaApp() = runTest {
+        servidor.enqueue(MockResponse.Builder().code(200).addHeader("Content-Type", "text/html").body("<html>Despertando…</html>").build())
+
+        try {
+            cuentas.login("ana@ucv.pe", "Cafetin2026")
+            fail("Debía fallar")
+        } catch (e: ErrorApi) {
+            assertEquals("ERROR_INTERNO", e.codigo)
+        }
+        assertNull(almacen.tokenActual())
     }
 
     @Test
@@ -121,6 +172,19 @@ class CuentasRepositorioTest {
         cuentas.recuperar("ana@ucv.pe")
 
         assertEquals("""{"correo":"ana@ucv.pe"}""", servidor.takeRequest().body?.utf8())
+    }
+
+    @Test
+    fun recuperarConUnErrorDeLaApiNoSeDaPorEnviado() = runTest {
+        servidor.enqueue(json(400, """{"codigo":"VALIDACION","mensaje":"Datos inválidos","detalles":[{"campo":"correo","mensaje":"no es un correo"}]}"""))
+
+        try {
+            cuentas.recuperar("ana")
+            fail("Debía fallar")
+        } catch (e: ErrorApi) {
+            assertEquals("VALIDACION", e.codigo)
+            assertEquals("correo", e.detalles.single().campo)
+        }
     }
 
     private fun tokenDe(rol: String) =
