@@ -5,6 +5,7 @@ import pe.edu.ucv.cafetin.app.datos.AlmacenSesionDataStore
 import pe.edu.ucv.cafetin.app.datos.ApiCafetin
 import pe.edu.ucv.cafetin.app.datos.ClienteApi
 import pe.edu.ucv.cafetin.app.datos.CuentasRepositorio
+import pe.edu.ucv.cafetin.app.datos.PedidosRepositorio
 
 /** Dependencias de la app, armadas a mano: es una app pequeña y así no se suma un framework de DI. */
 class CafetinApp : Application() {
@@ -12,4 +13,5 @@ class CafetinApp : Application() {
     val almacen: AlmacenSesionDataStore by lazy { AlmacenSesionDataStore(this) }
     val api: ApiCafetin by lazy { ClienteApi.crear(BuildConfig.API_URL, almacen::tokenActual, alRechazarJwt = { cuentas.jwtRechazado() }) }
     val cuentas: CuentasRepositorio by lazy { CuentasRepositorio(api, almacen) }
+    val pedidos: PedidosRepositorio by lazy { PedidosRepositorio(api) }
 }
