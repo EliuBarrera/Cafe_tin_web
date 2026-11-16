@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             TemaCafetin {
                 Box(Modifier.fillMaxSize().safeDrawingPadding()) {
-                    AppCafetin(app.cuentas)
+                    AppCafetin(app.cuentas, app.pedidos)
                 }
             }
         }
