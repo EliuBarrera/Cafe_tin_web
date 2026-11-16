@@ -5,7 +5,15 @@ export function MarcoPublico({ titulo, children }: { titulo: string; children: R
   return (
     <main className="marco-publico">
       <div className="tarjeta">
-        <p className="marca">Cafetín</p>
+        <div className="marca-panel marca-publica">
+          <span className="insignia-marca" aria-hidden="true">
+            ☕
+          </span>
+          <span>
+            <span className="marca">Cafetín UCV</span>
+            <span className="marca-subtitulo">Pedidos sin fila</span>
+          </span>
+        </div>
         <h1>{titulo}</h1>
         {children}
       </div>

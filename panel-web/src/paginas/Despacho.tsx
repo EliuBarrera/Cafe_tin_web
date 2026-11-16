@@ -83,6 +83,7 @@ export function Despacho() {
             {COLUMNAS.map((c) => (
               <Columna
                 key={c.estado}
+                estado={c.estado}
                 titulo={c.titulo}
                 pedidos={pedidos.filter((p) => p.estado === c.estado)}
                 alFallar={setAviso}
@@ -97,11 +98,13 @@ export function Despacho() {
 }
 
 function Columna({
+  estado,
   titulo,
   pedidos,
   alFallar,
   alAvanzar,
 }: {
+  estado: EstadoPedido
   titulo: string
   pedidos: PedidoDespacho[]
   alFallar: (aviso: Aviso) => void
@@ -109,7 +112,7 @@ function Columna({
 }) {
   const id = useId()
   return (
-    <section className="columna" aria-labelledby={id}>
+    <section className="columna" data-estado={estado} aria-labelledby={id}>
       <h2 id={id}>
         {titulo} <span className="contador">{pedidos.length}</span>
       </h2>

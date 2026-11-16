@@ -8,6 +8,14 @@
   --acento-oscuro: #5e3816;
   --error: #a4262c;
   --error-fondo: #fdecec;
+  /* Tonos derivados del mismo café (no colores nuevos de marca) */
+  --acento-claro: #f3e1ce;
+  --crema: #fff4e6;
+  --caramelo: #c07a3a; /* solo bordes y decoración: no cumple 4,5:1 como texto */
+  --caramelo-texto: #8a4f17;
+  --exito: #2e7d32;
+  --sombra: 0 1px 2px rgba(43, 33, 26, 0.06), 0 4px 12px rgba(43, 33, 26, 0.06);
+  --sombra-alta: 0 2px 4px rgba(43, 33, 26, 0.08), 0 10px 24px rgba(43, 33, 26, 0.1);
   color-scheme: light;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
@@ -21,12 +29,50 @@
 body {
   margin: 0;
   background: var(--fondo);
+  -webkit-font-smoothing: antialiased;
 }
 
 h1 {
   margin: 0 0 1rem;
-  font-size: 1.5rem;
-  line-height: 1.25;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h2 {
+  letter-spacing: -0.01em;
+}
+
+/* Marca: insignia + nombre, igual que en la app */
+.marca-panel {
+  display: inline-flex;
+  gap: 0.625rem;
+  align-items: center;
+}
+
+.marca-panel > span:last-child {
+  display: grid;
+  line-height: 1.15;
+}
+
+.insignia-marca {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.25rem;
+  background: linear-gradient(160deg, var(--acento), var(--acento-oscuro));
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+}
+
+.marca-subtitulo {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
 }
 
 .marca {
@@ -50,6 +96,14 @@ h1 {
   place-items: center;
   min-height: 100vh;
   padding: 1rem;
+  background:
+    radial-gradient(60rem 30rem at 0% 0%, var(--acento-claro), transparent 60%),
+    radial-gradient(40rem 24rem at 100% 100%, var(--crema), transparent 60%),
+    var(--fondo);
+}
+
+.marca-publica {
+  margin-bottom: 1.5rem;
 }
 
 .tarjeta {
@@ -58,7 +112,8 @@ h1 {
   padding: 2rem;
   background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: 20px;
+  box-shadow: var(--sombra-alta);
 }
 
 .tarjeta .marca {
@@ -98,14 +153,16 @@ a:focus-visible {
 
 .boton {
   min-height: 2.75rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.125rem;
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   color: #fff;
   cursor: pointer;
   background: var(--acento);
   border: 0;
-  border-radius: 8px;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(43, 33, 26, 0.12);
+  transition: background-color 0.15s;
 }
 
 .boton:hover:not(:disabled) {
@@ -157,8 +214,12 @@ a:focus-visible {
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
   align-items: center;
-  padding: 0.75rem 1rem;
-  background: var(--superficie);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0.625rem 1.25rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--borde);
 }
 
@@ -170,14 +231,19 @@ a:focus-visible {
 }
 
 .shell-menu a {
-  padding: 0.375rem 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0.375rem 0.875rem;
+  font-weight: 500;
   color: var(--texto);
   text-decoration: none;
-  border-radius: 6px;
+  border-radius: 999px;
+  transition: background-color 0.15s, color 0.15s;
 }
 
 .shell-menu a:hover {
-  background: var(--fondo);
+  background: var(--acento-claro);
 }
 
 /* Número de alertas pendientes junto a "Alertas" (ContadorAlertas) */
@@ -206,9 +272,13 @@ a:focus-visible {
 }
 
 .shell-menu a.active {
-  font-weight: 600;
-  color: var(--acento-oscuro);
-  background: var(--fondo);
+  font-weight: 700;
+  color: #fff;
+  background: var(--acento);
+}
+
+.shell-menu a.active .contador-menu {
+  outline: 2px solid #fff;
 }
 
 .shell-usuario {
@@ -218,10 +288,35 @@ a:focus-visible {
   font-size: 0.875rem;
 }
 
+.avatar-usuario {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--acento-oscuro);
+  background: var(--acento-claro);
+  border-radius: 50%;
+}
+
+.usuario-datos {
+  display: grid;
+  line-height: 1.2;
+}
+
+.usuario-datos > span:first-child {
+  font-weight: 600;
+}
+
+.usuario-rol {
+  font-size: 0.75rem;
+}
+
 .shell-contenido {
-  max-width: 72rem;
+  max-width: 76rem;
   margin: 0 auto;
-  padding: 1.5rem 1rem;
+  padding: 2rem 1.25rem;
 }
 
 /* Despacho */
@@ -255,11 +350,31 @@ a:focus-visible {
 }
 
 .columna {
+  --color-columna: var(--acento);
   display: grid;
   gap: 0.75rem;
-  padding: 0.75rem;
-  background: var(--borde-suave, #efe9e1);
-  border-radius: 12px;
+  padding: 0.875rem;
+  background: #efe9e1;
+  border-top: 4px solid var(--color-columna);
+  border-radius: 16px;
+}
+
+/* Un color por estado, del mismo café; el título y el contador dicen el estado (no solo el color). */
+.columna[data-estado='PENDIENTE'] {
+  --color-columna: var(--caramelo);
+}
+
+.columna[data-estado='CONFIRMADO'] {
+  --color-columna: var(--acento);
+}
+
+.columna[data-estado='EN_PREPARACION'] {
+  --color-columna: var(--acento-oscuro);
+}
+
+.columna[data-estado='LISTO'] {
+  --color-columna: var(--exito);
+  background: #e8f1e6;
 }
 
 .columna h2 {
@@ -272,12 +387,18 @@ a:focus-visible {
 
 .contador {
   min-width: 1.5rem;
-  padding: 0 0.375rem;
+  padding: 0 0.5rem;
   font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   text-align: center;
   color: #fff;
-  background: var(--acento);
+  background: var(--acento-oscuro);
   border-radius: 999px;
+}
+
+.columna[data-estado='LISTO'] .contador {
+  background: var(--exito);
 }
 
 .columna-vacia {
@@ -288,10 +409,28 @@ a:focus-visible {
 .tarjeta-pedido {
   display: grid;
   gap: 0.5rem;
-  padding: 0.75rem;
+  padding: 0.875rem;
   background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: 10px;
+  border-radius: 14px;
+  box-shadow: var(--sombra);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.tarjeta-pedido:hover {
+  box-shadow: var(--sombra-alta);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tarjeta-pedido,
+  .shell-menu a {
+    transition: none;
+  }
+
+  .tarjeta-pedido:hover {
+    transform: none;
+  }
 }
 
 .tarjeta-pedido p,
@@ -305,9 +444,12 @@ a:focus-visible {
 }
 
 .hora {
-  font-weight: 700;
+  padding: 0 0.5rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--acento-oscuro);
+  background: var(--crema);
+  border-radius: 999px;
 }
 
 .estudiante {
@@ -404,7 +546,8 @@ a:focus-visible {
   overflow-x: auto;
   background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: 16px;
+  box-shadow: var(--sombra);
 }
 
 .tabla {
@@ -423,8 +566,12 @@ a:focus-visible {
 }
 
 .tabla th {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--texto-suave);
+  background: var(--crema);
 }
 
 .tabla tbody tr:last-child td {
@@ -499,7 +646,8 @@ a:focus-visible {
   padding: 1rem;
   background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: 16px;
+  box-shadow: var(--sombra);
 }
 
 .panel-formulario h2 {
@@ -579,7 +727,8 @@ a:focus-visible {
   padding: 1rem;
   background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: 16px;
+  box-shadow: var(--sombra);
 }
 
 .panel-reporte:last-child {
@@ -660,7 +809,8 @@ a:focus-visible {
   padding: 1rem;
   background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: 16px;
+  box-shadow: var(--sombra);
 }
 
 .tarjeta-alerta p {
