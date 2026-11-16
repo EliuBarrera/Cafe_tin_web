@@ -22,7 +22,7 @@ fun PantallaLogin(vm: LoginViewModel, alEntrar: (Sesion) -> Unit, alRegistrarse:
         MensajeError(e.error)
         BotonPrincipal(if (e.cargando) "Entrando…" else "Entrar", e.cargando, vm::entrar)
         TextButton(onClick = alRecuperar) { Text("¿Olvidaste tu contraseña?") }
-        Row {
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Text("¿Primera vez?", style = MaterialTheme.typography.bodyMedium)
             TextButton(onClick = alRegistrarse) { Text("Crea tu cuenta") }
         }

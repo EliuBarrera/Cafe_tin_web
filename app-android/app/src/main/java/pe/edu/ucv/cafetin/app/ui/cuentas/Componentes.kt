@@ -1,6 +1,15 @@
 package pe.edu.ucv.cafetin.app.ui.cuentas
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,8 +48,19 @@ fun MarcoCuenta(titulo: String, contenido: @Composable () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Cafetín UCV", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Text(titulo, style = MaterialTheme.typography.headlineSmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center,
+                ) { Text("☕", fontSize = 22.sp) }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("Cafetín UCV", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+                    Text("Pide, paga y recoge sin hacer fila", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(titulo, style = MaterialTheme.typography.headlineMedium)
             contenido()
         }
     }

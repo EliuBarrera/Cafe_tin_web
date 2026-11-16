@@ -172,8 +172,10 @@ fun AppCafetin(cuentas: Cuentas, pedidos: Pedidos) {
             }
             composable(Rutas.PEDIDOS) {
                 PantallaHistorial(
-                    vm = viewModel(factory = viewModelFactory { initializer { HistorialViewModel(pedidos) } }),
+                    vm = viewModel(factory = viewModelFactory { initializer { HistorialViewModel(pedidos, carrito) } }),
                     alAbrir = { id -> nav.navigate(Rutas.pedido(id)) },
+                    alIrAlCarrito = { irAPestana(nav, Rutas.CARRITO) },
+                    alVerCatalogo = { irAPestana(nav, Rutas.CATALOGO) },
                 )
             }
             composable(Rutas.AVISOS) {
