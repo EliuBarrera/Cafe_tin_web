@@ -51,5 +51,37 @@ El APK de debug queda en `app/build/outputs/apk/debug/app-debug.apk` y apunta a
 `http://10.0.2.2:8080` (la API local vista desde el emulador). El release usa `cafetin.apiUrl` de
 `gradle.properties` (Render) y exige HTTPS; se puede cambiar con `-Pcafetin.apiUrl=https://…`.
 
+## APK firmado (distribución directa)
+
+La app se entrega como APK firmado, sin Play Store. El release usa la API de Render (`cafetin.apiUrl` en
+`gradle.properties`) y solo admite HTTPS.
+
+1. La llave de firma y sus contraseñas **no se suben**. Pídeselas al responsable de la app o, si es la
+   primera vez, crea una (PKCS12 usa la misma contraseña para la llave y el almacén):
+   ```bash
+   keytool -genkeypair -keystore ~/.config/cafetin/cafetin-release.jks -storetype PKCS12 \
+     -alias cafetin -keyalg RSA -keysize 4096 -validity 10000
+   ```
+2. Crea `app-android/keystore.properties` (está en `.gitignore`):
+   ```properties
+   storeFile=/home/<usuario>/.config/cafetin/cafetin-release.jks
+   storePassword=...
+   keyAlias=cafetin
+   keyPassword=...
+   ```
+   En CI se pueden usar las variables `CAFETIN_KEYSTORE`, `CAFETIN_KEYSTORE_PASSWORD`,
+   `CAFETIN_KEY_ALIAS` y `CAFETIN_KEY_PASSWORD` en lugar del archivo.
+3. Compila y comprueba la firma:
+   ```bash
+   JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./gradlew assembleRelease
+   $ANDROID_HOME/build-tools/<versión>/apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
+   ```
+
+Sin `keystore.properties` el release se compila **sin firmar** (no se puede instalar) y el debug no cambia.
+**Guarda una copia de la llave y de sus contraseñas**: si se pierden, las versiones nuevas no se podrán
+instalar encima de las anteriores y cada estudiante tendrá que desinstalar la app. Para cada versión nueva
+sube `versionCode` y `versionName` en `app/build.gradle.kts`. El APK de debug y el de release tienen el
+mismo id y distinta firma: para pasar de uno a otro en un teléfono hay que desinstalar primero.
+
 Los tests (`testDebugUnitTest`) corren en la JVM sin emulador: validaciones, ViewModels con un
 repositorio falso y el cliente HTTP contra una API simulada con MockWebServer.
