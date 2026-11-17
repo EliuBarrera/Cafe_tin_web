@@ -33,6 +33,7 @@ app-android/.gradle/
 app-android/build/
 app-android/app/build/
 app-android/local.properties
+app-android/keystore.properties
 app-android/captures/
 app-android/.externalNativeBuild/
 app-android/.cxx/

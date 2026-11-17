@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -5,6 +7,16 @@ plugins {
 }
 
 val apiUrlRelease = providers.gradleProperty("cafetin.apiUrl").get()
+
+// Firma del APK release. Los datos salen de app-android/keystore.properties (no se sube) o, en CI, de
+// variables de entorno. Sin ellos el release se compila sin firmar y el debug no cambia. Ver README.
+val firma = Properties().apply {
+    val archivo = rootProject.file("keystore.properties")
+    if (archivo.exists()) archivo.inputStream().use { load(it) }
+}
+fun datoFirma(clave: String, variable: String): String? =
+    firma.getProperty(clave) ?: providers.environmentVariable(variable).orNull
+val keystoreRelease = datoFirma("storeFile", "CAFETIN_KEYSTORE")
 
 android {
     namespace = "pe.edu.ucv.cafetin.app"
@@ -18,6 +30,17 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (keystoreRelease != null) {
+            create("release") {
+                storeFile = file(keystoreRelease)
+                storePassword = datoFirma("storePassword", "CAFETIN_KEYSTORE_PASSWORD")
+                keyAlias = datoFirma("keyAlias", "CAFETIN_KEY_ALIAS")
+                keyPassword = datoFirma("keyPassword", "CAFETIN_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // El emulador ve el localhost de la PC como 10.0.2.2. Solo aquí se permite HTTP (ver src/debug).
@@ -26,6 +49,7 @@ android {
         release {
             buildConfigField("String", "API_URL", "\"$apiUrlRelease\"")
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
