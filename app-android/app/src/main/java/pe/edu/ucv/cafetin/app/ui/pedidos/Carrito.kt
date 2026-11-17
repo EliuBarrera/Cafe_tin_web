@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import pe.edu.ucv.cafetin.app.datos.ItemPedidoRequest
+import pe.edu.ucv.cafetin.app.datos.LineaPedido
 import pe.edu.ucv.cafetin.app.datos.ProductoCatalogo
 import kotlin.math.roundToLong
 
@@ -20,6 +21,10 @@ class Carrito {
 
     private val _lineas = MutableStateFlow<List<LineaCarrito>>(emptyList())
     val lineas: StateFlow<List<LineaCarrito>> = _lineas.asStateFlow()
+
+    /** Último catálogo leído: lo usan la sugerencia del carrito y "repetir pedido". */
+    var catalogo: List<ProductoCatalogo> = emptyList()
+        private set
 
     /** Suma una unidad. Devuelve false si no se puede: agotado, sin más stock o en el máximo del contrato. */
     fun agregar(producto: ProductoCatalogo): Boolean {
@@ -46,6 +51,7 @@ class Carrito {
 
     /** Con el catálogo recién leído: ajusta precio y stock, y quita lo agotado o dado de baja. */
     fun actualizar(catalogo: List<ProductoCatalogo>) {
+        this.catalogo = catalogo
         val porId = catalogo.associateBy { it.idProducto }
         _lineas.update { lineas ->
             lineas.mapNotNull { linea ->
@@ -53,6 +59,20 @@ class Carrito {
                 if (nuevo.agotado) null else LineaCarrito(nuevo, minOf(linea.cantidad, maximoPara(nuevo)))
             }
         }
+    }
+
+    /**
+     * "Volver a pedir": suma al carrito las líneas de un pedido anterior que sigan disponibles, con el
+     * precio y el stock de hoy (no los del pedido viejo). Devuelve cuántas unidades se agregaron.
+     */
+    fun repetir(lineas: List<LineaPedido>, catalogo: List<ProductoCatalogo> = this.catalogo): Int {
+        val porId = catalogo.associateBy { it.idProducto }
+        var agregadas = 0
+        lineas.forEach { linea ->
+            val producto = porId[linea.idProducto] ?: return@forEach
+            repeat(linea.cantidad) { if (agregar(producto)) agregadas++ }
+        }
+        return agregadas
     }
 
     fun vaciar() = _lineas.update { emptyList() }

@@ -4,6 +4,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import pe.edu.ucv.cafetin.app.datos.ProductoCatalogo
 
 fun soles(monto: Double) = solesDeCentimos(centimos(monto))
 
@@ -46,3 +47,39 @@ fun etiquetaEstado(estado: String, estadoPago: String?): String = when (estado) 
 fun esFinal(estado: String) = estado == "ENTREGADO" || estado == "CANCELADO"
 
 val METODOS_PAGO = listOf("YAPE" to "Yape", "PLIN" to "Plin", "TARJETA" to "Tarjeta")
+
+/** Saludo según la hora de Lima del teléfono. */
+fun saludo(ahora: LocalTime): String = when (ahora.hour) {
+    in 5..11 -> "Buenos días"
+    in 12..18 -> "Buenas tardes"
+    else -> "Buenas noches"
+}
+
+/** Pasos que ve el estudiante en el seguimiento, en orden. */
+val PASOS_PEDIDO = listOf("Pagado", "Confirmado", "En preparación", "Listo", "Entregado")
+
+/**
+ * Paso alcanzado (índice en [PASOS_PEDIDO]) o -1 si aún no está pagado. CANCELADO también da -1:
+ * la pantalla lo muestra aparte, no como un paso más.
+ */
+fun pasoActual(estado: String, estadoPago: String?): Int = when (estado) {
+    "PENDIENTE" -> if (estadoPago == "PAGADO") 0 else -1
+    "CONFIRMADO" -> 1
+    "EN_PREPARACION" -> 2
+    "LISTO" -> 3
+    "ENTREGADO" -> 4
+    else -> -1
+}
+
+/**
+ * Una sola sugerencia antes de pagar (impulso, con filtro ético): el producto disponible más económico
+ * de una categoría que el carrito todavía no tiene, prefiriendo bebidas. Nada si el carrito está vacío
+ * o ya cubre todo. Es una sugerencia: no se agrega sola.
+ */
+fun sugerencia(lineas: List<LineaCarrito>, catalogo: List<ProductoCatalogo>): ProductoCatalogo? {
+    if (lineas.isEmpty()) return null
+    val enCarrito = lineas.map { it.producto.idProducto }.toSet()
+    val categoriasEnCarrito = lineas.mapNotNull { it.producto.categoria }.toSet()
+    val candidatos = catalogo.filter { !it.agotado && it.idProducto !in enCarrito && it.categoria !in categoriasEnCarrito }
+    return candidatos.minWithOrNull(compareBy<ProductoCatalogo>({ it.categoria != "Bebidas" }, { it.precio }))
+}

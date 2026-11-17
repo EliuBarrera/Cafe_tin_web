@@ -145,6 +145,43 @@ class PedidosViewModelsTest {
     }
 
     @Test
+    fun repetirElUltimoPedidoLlenaElCarritoYVaAlCarrito() {
+        api.catalogo = listOf(producto(7, disponible = 10))
+        api.items = listOf(pe.edu.ucv.cafetin.app.datos.LineaPedido(7, "Café", 2, 2.5, 5.0))
+        val vm = CatalogoViewModel(api, carrito)
+        assertEquals("PED-0", vm.estado.value.ultimo?.codigoPedido)
+
+        vm.repetirUltimo()
+
+        assertEquals(2, carrito.cantidadDe(7))
+        assertTrue(vm.estado.value.irAlCarrito)
+    }
+
+    @Test
+    fun repetirSinNadaDisponibleAvisaYNoNavega() {
+        api.catalogo = listOf(producto(7, disponible = 0, estado = "AGOTADO"))
+        api.items = listOf(pe.edu.ucv.cafetin.app.datos.LineaPedido(7, "Café", 1, 2.5, 2.5))
+        val vm = CatalogoViewModel(api, carrito)
+
+        vm.repetirUltimo()
+
+        assertFalse(vm.estado.value.irAlCarrito)
+        assertEquals("Los productos de tu último pedido no están disponibles ahora", vm.estado.value.aviso)
+    }
+
+    @Test
+    fun volverAPedirDesdeElHistorialUsaElCatalogoDeHoy() {
+        api.catalogo = listOf(producto(7, precio = 3.0, disponible = 10))
+        api.items = listOf(pe.edu.ucv.cafetin.app.datos.LineaPedido(7, "Café", 1, 2.5, 2.5))
+        val vm = HistorialViewModel(api, carrito)
+
+        vm.volverAPedir(0)
+
+        assertEquals(300L, carrito.totalCentimos())
+        assertTrue(vm.estado.value.irAlCarrito)
+    }
+
+    @Test
     fun abrirUnAvisoLoMarcaLeido() {
         api.avisos = listOf(Notificacion(1, "PEDIDO_LISTO", "Tu pedido está listo", 30))
         val vm = AvisosViewModel(api)
@@ -166,6 +203,7 @@ class PedidosFalsos : Pedidos {
     var paginas = 1
     val paginasPedidas = mutableListOf<Int>()
     var avisos: List<Notificacion> = emptyList()
+    var items: List<pe.edu.ucv.cafetin.app.datos.LineaPedido> = emptyList()
     val leidas = mutableListOf<Int>()
 
     private val sinPagar = PedidoResponse(30, "PED-430", "PENDIENTE", total = 5.0)
@@ -188,7 +226,7 @@ class PedidosFalsos : Pedidos {
 
     override suspend fun cancelar(idPedido: Int) = sinPagar.copy(estado = "CANCELADO").also { fallarSiToca() }
 
-    override suspend fun pedido(idPedido: Int) = sinPagar
+    override suspend fun pedido(idPedido: Int) = sinPagar.copy(items = items)
 
     override suspend fun historial(pagina: Int, tamano: Int): PaginaPedidos {
         paginasPedidas += pagina

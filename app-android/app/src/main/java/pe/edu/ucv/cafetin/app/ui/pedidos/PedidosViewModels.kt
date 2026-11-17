@@ -27,6 +27,11 @@ data class CatalogoEstado(
     /** Categoría elegida; null = todas. */
     val categoria: String? = null,
     val aviso: String? = null,
+    /** Último pedido pagado, para repetirlo con un toque (reconocer, no recordar). */
+    val ultimo: PedidoResumen? = null,
+    val repitiendo: Boolean = false,
+    /** Se agregó un pedido anterior al carrito: la pantalla va al carrito. */
+    val irAlCarrito: Boolean = false,
 ) {
     val visibles: List<ProductoCatalogo>
         get() = if (categoria == null) productos else productos.filter { it.categoria == categoria }
@@ -39,7 +44,37 @@ class CatalogoViewModel(private val pedidos: Pedidos, val carrito: Carrito) : Vi
 
     init {
         cargar()
+        cargarUltimo()
     }
+
+    /** Si falla no pasa nada: la tarjeta de repetir simplemente no aparece. */
+    private fun cargarUltimo() {
+        viewModelScope.launch {
+            runCatching { pedidos.historial(0, 5) }.onSuccess { pagina ->
+                val ultimo = pagina.contenido.firstOrNull { it.estadoPago == "PAGADO" && it.estado != "CANCELADO" }
+                _estado.update { it.copy(ultimo = ultimo) }
+            }
+        }
+    }
+
+    /** Métrica sugerida: % de pedidos que empiezan desde "repetir". */
+    fun repetirUltimo() {
+        val ultimo = _estado.value.ultimo ?: return
+        _estado.update { it.copy(repitiendo = true) }
+        viewModelScope.launch {
+            try {
+                val agregadas = carrito.repetir(pedidos.pedido(ultimo.id).items)
+                _estado.update {
+                    if (agregadas > 0) it.copy(repitiendo = false, irAlCarrito = true)
+                    else it.copy(repitiendo = false, aviso = "Los productos de tu último pedido no están disponibles ahora")
+                }
+            } catch (e: ErrorApi) {
+                _estado.update { it.copy(repitiendo = false, aviso = e.message) }
+            }
+        }
+    }
+
+    fun navegadoAlCarrito() = _estado.update { it.copy(irAlCarrito = false) }
 
     fun cargar() {
         _estado.update { it.copy(cargando = true, error = null) }
@@ -248,9 +283,34 @@ data class HistorialEstado(
     val pagina: Int = 0,
     val hayMas: Boolean = false,
     val error: String? = null,
+    /** Pedido que se está agregando al carrito con "Volver a pedir". */
+    val repitiendo: Int? = null,
+    val aviso: String? = null,
+    val irAlCarrito: Boolean = false,
 )
 
-class HistorialViewModel(private val pedidos: Pedidos) : ViewModel() {
+class HistorialViewModel(private val pedidos: Pedidos, private val carrito: Carrito = Carrito()) : ViewModel() {
+
+    /** "Volver a pedir": lee el detalle, actualiza precios y stock con el catálogo de hoy y llena el carrito. */
+    fun volverAPedir(idPedido: Int) {
+        _estado.update { it.copy(repitiendo = idPedido, aviso = null) }
+        viewModelScope.launch {
+            try {
+                val catalogo = pedidos.catalogo().also(carrito::actualizar)
+                val agregadas = carrito.repetir(pedidos.pedido(idPedido).items, catalogo)
+                _estado.update {
+                    if (agregadas > 0) it.copy(repitiendo = null, irAlCarrito = true)
+                    else it.copy(repitiendo = null, aviso = "Esos productos no están disponibles ahora")
+                }
+            } catch (e: ErrorApi) {
+                _estado.update { it.copy(repitiendo = null, aviso = e.message) }
+            }
+        }
+    }
+
+    fun navegadoAlCarrito() = _estado.update { it.copy(irAlCarrito = false) }
+    fun avisoVisto() = _estado.update { it.copy(aviso = null) }
+
 
     private val _estado = MutableStateFlow(HistorialEstado())
     val estado: StateFlow<HistorialEstado> = _estado.asStateFlow()

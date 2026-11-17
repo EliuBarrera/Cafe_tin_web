@@ -1,11 +1,18 @@
 package pe.edu.ucv.cafetin.app.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 // Mismos tonos café que el panel web (panel-web/src/estilos.css).
 private val Claro = lightColorScheme(
@@ -57,7 +64,45 @@ private val Oscuro = darkColorScheme(
     surfaceContainerHighest = Color(0xFF3E342C),
 )
 
+/**
+ * Tonos de acento derivados del mismo café (no son colores nuevos de marca): caramelo para resaltar
+ * precios y el paso actual, crema para fondos de tarjetas destacadas.
+ */
+object Acentos {
+    /** Solo para puntos, bordes y fondos: como texto pequeño no llega al contraste 4,5:1. */
+    val caramelo = Color(0xFFC07A3A)
+    /** Variante oscura para texto sobre fondo claro (contraste ≥ 4,5:1, WCAG 2.1 AA). */
+    val carameloTexto = Color(0xFF8A4F17)
+    val crema = Color(0xFFFFF4E6)
+    val exito = Color(0xFF2E7D32)
+}
+
+// Personalidad con la tipografía del sistema (sin fuentes nuevas): títulos más gruesos y apretados.
+private val base = Typography()
+private val Tipografia = base.copy(
+    displaySmall = base.displaySmall.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp),
+    headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp),
+    headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.25).sp),
+    titleLarge = base.titleLarge.copy(fontWeight = FontWeight.Bold),
+    titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+    labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp),
+)
+
+private val Formas = Shapes(
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(18.dp),
+    large = RoundedCornerShape(24.dp),
+)
+
+/** Estilo de los precios: tabular para que las cifras no bailen al cambiar cantidades. */
+val estiloPrecio = TextStyle(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum")
+
 @Composable
 fun TemaCafetin(contenido: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) Oscuro else Claro, content = contenido)
+    MaterialTheme(
+        colorScheme = if (isSystemInDarkTheme()) Oscuro else Claro,
+        typography = Tipografia,
+        shapes = Formas,
+        content = contenido,
+    )
 }
