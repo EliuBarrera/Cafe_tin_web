@@ -9,8 +9,8 @@ import { borrarToken, guardarToken } from '../sesion/almacen'
 import { SesionProvider } from '../sesion/SesionProvider'
 import { INTERVALO_ALERTAS_MS } from './ContadorAlertas'
 
-const dueno: Usuario = { id: 1, nombre: 'Rosa', apellidos: 'Quispe', correo: 'rosa@cafetin.pe', rol: 'DUENO' }
-const trabajador: Usuario = { id: 2, nombre: 'Carmen', apellidos: 'Díaz', correo: 'carmen@cafetin.pe', rol: 'TRABAJADOR' }
+const dueno: Usuario = { id: 1, nombre: 'Rosa', apellidos: 'Quispe', correo: 'rosa@cafetin.pe', rol: 'DUENO', cafeteria: { id: 1, nombre: 'Cafetín principal', ubicacion: null } }
+const trabajador: Usuario = { id: 2, nombre: 'Carmen', apellidos: 'Díaz', correo: 'carmen@cafetin.pe', rol: 'TRABAJADOR', cafeteria: { id: 1, nombre: 'Cafetín principal', ubicacion: null } }
 
 function alerta(id: number): Alerta {
   return {

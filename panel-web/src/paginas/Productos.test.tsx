@@ -9,7 +9,7 @@ import type { Categoria, Producto, Proveedor, Usuario } from '../api/tipos'
 import { borrarToken, guardarToken } from '../sesion/almacen'
 import { SesionProvider } from '../sesion/SesionProvider'
 
-const dueno: Usuario = { id: 1, nombre: 'Rosa', apellidos: 'Quispe', correo: 'rosa@cafetin.pe', rol: 'DUENO' }
+const dueno: Usuario = { id: 1, nombre: 'Rosa', apellidos: 'Quispe', correo: 'rosa@cafetin.pe', rol: 'DUENO', cafeteria: { id: 1, nombre: 'Cafetín principal', ubicacion: null } }
 
 const categorias: Categoria[] = [
   { id: 1, nombre: 'Bebidas', descripcion: null, activo: true },

@@ -9,8 +9,8 @@ import type { Rol, Usuario } from './api/tipos'
 import { borrarToken, guardarToken, leerToken } from './sesion/almacen'
 import { SesionProvider } from './sesion/SesionProvider'
 
-const dueno: Usuario = { id: 1, nombre: 'Rosa', apellidos: 'Quispe', correo: 'rosa@cafetin.pe', rol: 'DUENO' }
-const trabajador: Usuario = { id: 2, nombre: 'Carmen', apellidos: 'Díaz', correo: 'carmen@cafetin.pe', rol: 'TRABAJADOR' }
+const dueno: Usuario = { id: 1, nombre: 'Rosa', apellidos: 'Quispe', correo: 'rosa@cafetin.pe', rol: 'DUENO', cafeteria: { id: 1, nombre: 'Cafetín principal', ubicacion: null } }
+const trabajador: Usuario = { id: 2, nombre: 'Carmen', apellidos: 'Díaz', correo: 'carmen@cafetin.pe', rol: 'TRABAJADOR', cafeteria: { id: 1, nombre: 'Cafetín principal', ubicacion: null } }
 
 function json(estado: number, cuerpo?: unknown) {
   return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), {
@@ -138,6 +138,13 @@ describe('rutas protegidas y menú por rol', () => {
 
     const menu = await screen.findByRole('navigation', { name: 'Principal' })
     expect(within(menu).getAllByRole('link').map((a) => a.textContent)).toEqual(['Despacho'])
+  })
+
+  it('la barra muestra el cafetín del usuario', async () => {
+    apiFalsa(conSesion({ ...trabajador, cafeteria: { id: 2, nombre: 'Cafetín Pabellón B', ubicacion: null } }))
+    abrir('/')
+
+    expect(await screen.findByText('Cafetín Pabellón B')).toBeInTheDocument()
   })
 
   it('el dueño ve todas las secciones', async () => {

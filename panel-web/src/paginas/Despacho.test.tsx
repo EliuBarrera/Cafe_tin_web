@@ -10,7 +10,7 @@ import { borrarToken, guardarToken } from '../sesion/almacen'
 import { SesionProvider } from '../sesion/SesionProvider'
 import { INTERVALO_REFRESCO_MS } from './Despacho'
 
-const trabajador: Usuario = { id: 2, nombre: 'Carmen', apellidos: 'Díaz', correo: 'carmen@cafetin.pe', rol: 'TRABAJADOR' }
+const trabajador: Usuario = { id: 2, nombre: 'Carmen', apellidos: 'Díaz', correo: 'carmen@cafetin.pe', rol: 'TRABAJADOR', cafeteria: { id: 1, nombre: 'Cafetín principal', ubicacion: null } }
 
 function pedido(cambios: Partial<PedidoDespacho> & Pick<PedidoDespacho, 'idPedido'>): PedidoDespacho {
   return {

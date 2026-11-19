@@ -10,7 +10,7 @@ import { INTERVALO_ALERTAS_MS } from '../componentes/ContadorAlertas'
 import { borrarToken, guardarToken } from '../sesion/almacen'
 import { SesionProvider } from '../sesion/SesionProvider'
 
-const dueno: Usuario = { id: 1, nombre: 'Rosa', apellidos: 'Quispe', correo: 'rosa@cafetin.pe', rol: 'DUENO' }
+const dueno: Usuario = { id: 1, nombre: 'Rosa', apellidos: 'Quispe', correo: 'rosa@cafetin.pe', rol: 'DUENO', cafeteria: { id: 1, nombre: 'Cafetín principal', ubicacion: null } }
 
 function alerta(id: number, cambios: Partial<Alerta> = {}): Alerta {
   return {
