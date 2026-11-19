@@ -52,7 +52,7 @@ Una tarea está terminada solo cuando el comando de tests del módulo pasa.
 - **Nunca edites una migración ya aplicada.** Cualquier cambio = nuevo archivo `V<n>__descripcion.sql`,
   y pregunta antes de crearlo.
 - Tablas y columnas en `snake_case` y en español. Precios `NUMERIC(8,2)`. Contraseñas con BCrypt.
-- 14 tablas. Herencia por subtipo: `usuario` → `estudiante` / `trabajador` / `dueno`;
+- 15 tablas (las 14 del diagrama + `cafeteria`, V11). Herencia por subtipo: `usuario` → `estudiante` / `trabajador` / `dueno`;
   `notificacion` → `alerta_stock`. 1:1: `producto`–`inventario`, `pedido`–`pago`, `pago`–`recibo`.
 
 ### Lo que hace la BD (no lo reimplementes en Java)
@@ -61,7 +61,9 @@ Una tarea está terminada solo cuando el comando de tests del módulo pasa.
 |---|---|---|
 | `trg_calcular_total_pedido` | INSERT/UPDATE/DELETE en `detalle_pedido` | Recalcula `pedido.total` |
 | `trg_descontar_stock` | **UPDATE** de `pago` a `PAGADO` | Descuenta `inventario.cantidad_disponible` |
-| `trg_alerta_stock_minimo` | UPDATE de `inventario` que **cruza** el mínimo o llega a 0 | Inserta `notificacion` + `alerta_stock` (`STOCK_BAJO` / `STOCK_AGOTADO`) para cada dueño. No cambia `producto.activo` |
+| `trg_alerta_stock_minimo` | UPDATE de `inventario` que **cruza** el mínimo o llega a 0 | Inserta `notificacion` + `alerta_stock` (`STOCK_BAJO` / `STOCK_AGOTADO`) para cada dueño **de la cafetería del producto** (V11). No cambia `producto.activo` |
+| `trg_detalle_misma_cafeteria` | INSERT/UPDATE en `detalle_pedido` | Rechaza un producto de otra cafetería que la del pedido (V11) |
+| `trg_producto_misma_cafeteria` | INSERT/UPDATE en `producto` | Rechaza categoría o proveedor de otra cafetería (V11) |
 
 Consecuencias:
 - `pedido.total` y `detalle_pedido.subtotal` (columna GENERATED) son de **solo lectura** en JPA
@@ -72,6 +74,17 @@ Consecuencias:
 - Vistas de solo lectura (`@Immutable`): `v_catalogo_disponible`, `v_pedidos_en_curso`,
   `v_ingresos_diarios`, `v_productos_mas_vendidos`, `v_alertas_reposicion`.
 - `v_pedidos_en_curso` incluye pedidos sin pagar: en despacho filtra `estado_pago = 'PAGADO'`.
+
+### Varios cafetines (V11)
+
+- `cafeteria` agrupa todo: `id_cafeteria` en `categoria`, `producto`, `proveedor`, `pedido`, `trabajador` y `dueno`;
+  las vistas lo exponen. Nombres de categoría, producto y proveedor son únicos **por cafetería**.
+- Dueño y trabajador solo ven y cambian lo de su cafetería: `UsuarioActual.cafeteria()` (lee la base, funciona con
+  `@WithMockUser`). Un recurso de otra cafetería responde **404**, igual que un pedido ajeno.
+- El estudiante elige el cafetín: `GET /api/cafeterias`, `GET /api/catalogo?cafeteria=`, `POST /api/pedidos` con
+  `idCafeteria`. Un pedido es de un solo cafetín.
+- Alta de un cafetín: `docs/alta-cafeteria.sql` (sin rol ADMIN). En tests, `DatosPrueba` usa la cafetería 1 por defecto
+  y `datos.cafeteria()` crea otra.
 
 ### Mapeo JPA
 
@@ -179,6 +192,8 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 08/11/2026 · Recuperación de contraseña por correo con `spring-boot-starter-mail` (SMTP de Gmail en Render) · sin un envío real, RF-03 no funcionaba en producción. Sin `SPRING_MAIL_HOST` se usa el log, solo en dev.
 - 08/11/2026 · Push por la API HTTP v1 de FCM sin `firebase-admin` (JWT RS256 con Nimbus y `RestClient`) · el SDK suma decenas de librerías y memoria en el plan de 512 MB de Render; Nimbus ya viene con la seguridad.
 - 09/11/2026 · `search_path` con `options=-c search_path=cafetin` en vez de `currentSchema` · Neon ignora `currentSchema` y las conexiones quedaban en `public`: fallaban los triggers (crear pedido, pagar, editar inventario) y las consultas nativas. Testcontainers sí lo respeta; `SearchPathTest` fija la configuración.
+- 19/11/2026 · Varios cafetines en una sola instalación (V11): cada uno con su dueño, trabajadores, categorías, productos y pedidos; alta por `docs/alta-cafeteria.sql`, sin rol ADMIN · paso previo para que cada cafetín cobre en su propia cuenta de Mercado Pago. Las categorías también son por cafetería, para que un dueño no edite las de otro.
+- 19/11/2026 · Pasarela real: Mercado Pago (Checkout Pro + OAuth por cafetín, marketplace con comisión configurable, 0 % por defecto), en una fase posterior · opera en Perú, tiene modo de prueba sin RUC y el dinero llega a la cuenta de cada cafetín. Plin no está en Mercado Pago. Reemplaza la pasarela simulada del 02/11/2026 cuando se implemente.
 
 ## Qué no hacer
 
