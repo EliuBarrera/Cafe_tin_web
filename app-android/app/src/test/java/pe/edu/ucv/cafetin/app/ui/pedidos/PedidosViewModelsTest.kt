@@ -12,6 +12,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import pe.edu.ucv.cafetin.app.datos.Cafeteria
 import pe.edu.ucv.cafetin.app.datos.CrearPedidoRequest
 import pe.edu.ucv.cafetin.app.datos.ErrorApi
 import pe.edu.ucv.cafetin.app.datos.ItemPedidoRequest
@@ -32,7 +33,10 @@ class PedidosViewModelsTest {
     private val carrito = Carrito()
 
     @Before
-    fun preparar() = Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun preparar() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        carrito.elegir(PRINCIPAL)
+    }
 
     @After
     fun limpiar() = Dispatchers.resetMain()
@@ -69,7 +73,7 @@ class PedidosViewModelsTest {
         vm.cambiarObservacion("  Sin ají  ")
         vm.confirmar()
 
-        assertEquals(CrearPedidoRequest("10:45", listOf(ItemPedidoRequest(7, 2)), "Sin ají"), api.creado)
+        assertEquals(CrearPedidoRequest(1, "10:45", listOf(ItemPedidoRequest(7, 2)), "Sin ají"), api.creado)
         assertEquals(30, vm.estado.value.pedidoCreado)
         assertTrue(carrito.lineas.value.isEmpty())
     }
@@ -181,6 +185,81 @@ class PedidosViewModelsTest {
         assertTrue(vm.estado.value.irAlCarrito)
     }
 
+    // ------------------------------------------------------------ Cafetines
+
+    @Test
+    fun conUnSoloCafetinLoEligeSoloYCargaSuCatalogo() {
+        api.catalogo = listOf(producto(1))
+        val vm = CatalogoViewModel(api, Carrito())
+
+        assertEquals(PRINCIPAL, vm.estado.value.cafeteria)
+        assertFalse(vm.estado.value.eligiendo)
+        assertEquals(listOf(1), api.catalogosPedidos)
+    }
+
+    @Test
+    fun conVariosCafetinesPideElegirSalvoQueHayaUnoRecordado() {
+        api.cafeterias = listOf(PRINCIPAL, NORTE)
+        val sinRecordar = CatalogoViewModel(api, Carrito())
+        assertTrue(sinRecordar.estado.value.eligiendo)
+        assertNull(sinRecordar.estado.value.cafeteria)
+        assertTrue(api.catalogosPedidos.isEmpty())
+
+        var recordado: Int? = null
+        val conRecordado = CatalogoViewModel(api, Carrito(), preferida = { 2 }, recordar = { recordado = it })
+        assertEquals(NORTE, conRecordado.estado.value.cafeteria)
+        assertEquals(listOf(2), api.catalogosPedidos)
+        assertEquals(2, recordado)
+    }
+
+    @Test
+    fun cambiarDeCafetinConElCarritoLlenoPideConfirmarYLoVacia() {
+        api.cafeterias = listOf(PRINCIPAL, NORTE)
+        api.catalogo = listOf(producto(7)) // si no, al cargar el catálogo el carrito suelta el producto
+        carrito.agregar(producto(7))
+        val vm = CatalogoViewModel(api, carrito)
+
+        vm.cambiarCafeteria()
+        vm.elegir(NORTE)
+        assertEquals(NORTE, vm.estado.value.porConfirmar)
+        assertEquals(1, carrito.unidades())
+
+        vm.cancelarCambio()
+        assertEquals(PRINCIPAL, carrito.cafeteria.value)
+
+        vm.elegir(NORTE)
+        vm.confirmarCambio()
+        assertEquals(NORTE, carrito.cafeteria.value)
+        assertEquals(0, carrito.unidades())
+        assertFalse(vm.estado.value.eligiendo)
+        assertEquals(2, api.catalogosPedidos.last())
+    }
+
+    @Test
+    fun carritoSinCafetinNoCreaElPedido() {
+        val sinCafetin = Carrito()
+        sinCafetin.agregar(producto(7))
+        val vm = CarritoViewModel(api, sinCafetin) { LocalTime.of(10, 0) }
+
+        vm.confirmar()
+
+        assertNull(api.creado)
+        assertEquals("Elige un cafetín en el catálogo", vm.estado.value.error)
+    }
+
+    @Test
+    fun volverAPedirDeOtroCafetinConElCarritoLlenoAvisaSinMezclar() {
+        api.cafeteriaDelPedido = NORTE
+        carrito.agregar(producto(7))
+        val vm = HistorialViewModel(api, carrito)
+
+        vm.volverAPedir(0)
+
+        assertEquals(PRINCIPAL, carrito.cafeteria.value)
+        assertEquals(1, carrito.unidades())
+        assertEquals("Tu carrito es de Cafetín principal. Termina o vacía ese pedido primero", vm.estado.value.aviso)
+    }
+
     @Test
     fun abrirUnAvisoLoMarcaLeido() {
         api.avisos = listOf(Notificacion(1, "PEDIDO_LISTO", "Tu pedido está listo", 30))
@@ -194,8 +273,14 @@ class PedidosViewModelsTest {
     }
 }
 
+val PRINCIPAL = Cafeteria(1, "Cafetín principal")
+val NORTE = Cafeteria(2, "Cafetín Norte", "Pabellón B")
+
 /** API de pedidos en memoria para los ViewModels. */
 class PedidosFalsos : Pedidos {
+    var cafeterias: List<Cafeteria> = listOf(PRINCIPAL)
+    val catalogosPedidos = mutableListOf<Int>()
+    var cafeteriaDelPedido: Cafeteria = PRINCIPAL
     var catalogo: List<ProductoCatalogo> = emptyList()
     var falla: ErrorApi? = null
     var creado: CrearPedidoRequest? = null
@@ -210,7 +295,13 @@ class PedidosFalsos : Pedidos {
 
     private fun fallarSiToca() = falla?.let { throw it }
 
-    override suspend fun catalogo() = catalogo.also { fallarSiToca() }
+    override suspend fun cafeterias() = cafeterias.also { fallarSiToca() }
+
+    override suspend fun catalogo(idCafeteria: Int): List<ProductoCatalogo> {
+        catalogosPedidos += idCafeteria
+        fallarSiToca()
+        return catalogo
+    }
 
     override suspend fun crear(solicitud: CrearPedidoRequest): PedidoResponse {
         fallarSiToca()
@@ -226,7 +317,7 @@ class PedidosFalsos : Pedidos {
 
     override suspend fun cancelar(idPedido: Int) = sinPagar.copy(estado = "CANCELADO").also { fallarSiToca() }
 
-    override suspend fun pedido(idPedido: Int) = sinPagar.copy(items = items)
+    override suspend fun pedido(idPedido: Int) = sinPagar.copy(items = items, cafeteria = cafeteriaDelPedido)
 
     override suspend fun historial(pagina: Int, tamano: Int): PaginaPedidos {
         paginasPedidas += pagina

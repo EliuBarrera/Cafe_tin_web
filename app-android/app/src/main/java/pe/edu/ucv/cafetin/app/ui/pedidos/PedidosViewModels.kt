@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pe.edu.ucv.cafetin.app.datos.Cafeteria
 import pe.edu.ucv.cafetin.app.datos.CrearPedidoRequest
 import pe.edu.ucv.cafetin.app.datos.ErrorApi
 import pe.edu.ucv.cafetin.app.datos.Notificacion
@@ -32,26 +33,113 @@ data class CatalogoEstado(
     val repitiendo: Boolean = false,
     /** Se agregó un pedido anterior al carrito: la pantalla va al carrito. */
     val irAlCarrito: Boolean = false,
+    /** Cafetín cuyo catálogo se muestra; null mientras el estudiante no elige. */
+    val cafeteria: Cafeteria? = null,
+    /** La pantalla muestra la lista de cafetines en vez del catálogo. */
+    val eligiendo: Boolean = false,
+    val cafeterias: List<Cafeteria> = emptyList(),
+    /** Cafetín elegido con el carrito lleno de otro: espera que el estudiante confirme vaciarlo. */
+    val porConfirmar: Cafeteria? = null,
 ) {
     val visibles: List<ProductoCatalogo>
         get() = if (categoria == null) productos else productos.filter { it.categoria == categoria }
 }
 
-class CatalogoViewModel(private val pedidos: Pedidos, val carrito: Carrito) : ViewModel() {
+/**
+ * Catálogo de un cafetín. Al abrir: el del carrito si ya hay uno; si no, el último elegido (DataStore); si no,
+ * el único que haya; y si hay varios, el estudiante elige de la lista.
+ */
+class CatalogoViewModel(
+    private val pedidos: Pedidos,
+    val carrito: Carrito,
+    private val preferida: suspend () -> Int? = { null },
+    private val recordar: suspend (Int) -> Unit = {},
+) : ViewModel() {
 
-    private val _estado = MutableStateFlow(CatalogoEstado())
+    private val _estado = MutableStateFlow(CatalogoEstado(cafeteria = carrito.cafeteria.value))
     val estado: StateFlow<CatalogoEstado> = _estado.asStateFlow()
 
     init {
+        if (carrito.cafeteria.value != null) {
+            cargar()
+            cargarUltimo()
+        } else {
+            cargarCafeterias(automatica = true)
+        }
+        // "Volver a pedir" desde el historial puede cambiar el cafetín del carrito: el catálogo lo sigue.
+        viewModelScope.launch {
+            carrito.cafeteria.collect { c -> if (c != null && c.id != _estado.value.cafeteria?.id) aplicar(c) }
+        }
+    }
+
+    /** Con [automatica], elige sola si hay una preferida o un único cafetín; si no, muestra la lista. */
+    private fun cargarCafeterias(automatica: Boolean) {
+        _estado.update { it.copy(cargando = true, error = null) }
+        viewModelScope.launch {
+            try {
+                val lista = pedidos.cafeterias()
+                val sola = if (!automatica) null
+                else runCatching { preferida() }.getOrNull()?.let { id -> lista.firstOrNull { it.id == id } }
+                    ?: lista.singleOrNull()
+                _estado.update { it.copy(cafeterias = lista, cargando = false, eligiendo = sola == null) }
+                if (sola != null) aplicar(sola)
+                else if (lista.isEmpty()) _estado.update { it.copy(error = "Todavía no hay cafetines atendiendo") }
+            } catch (e: ErrorApi) {
+                _estado.update { it.copy(cargando = false, error = e.message, eligiendo = true) }
+            }
+        }
+    }
+
+    /** "Cambiar" en la cabecera. */
+    fun cambiarCafeteria() {
+        _estado.update { it.copy(eligiendo = true) }
+        cargarCafeterias(automatica = false)
+    }
+
+    /** Volver al catálogo sin cambiar (solo si ya había uno). */
+    fun cancelarEleccion() {
+        if (_estado.value.cafeteria != null) _estado.update { it.copy(eligiendo = false, error = null) }
+    }
+
+    fun elegir(cafeteria: Cafeteria) {
+        val actual = carrito.cafeteria.value
+        if (actual != null && actual.id != cafeteria.id && carrito.lineas.value.isNotEmpty()) {
+            _estado.update { it.copy(porConfirmar = cafeteria) }
+        } else {
+            aplicar(cafeteria)
+        }
+    }
+
+    fun confirmarCambio() = _estado.value.porConfirmar?.let { aplicar(it) }
+
+    fun cancelarCambio() = _estado.update { it.copy(porConfirmar = null) }
+
+    private fun aplicar(cafeteria: Cafeteria) {
+        val cambio = _estado.value.cafeteria?.id != cafeteria.id
+        // Primero el estado y luego el carrito: así el colector de init no vuelve a aplicarlo.
+        _estado.update {
+            it.copy(
+                cafeteria = cafeteria, eligiendo = false, porConfirmar = null,
+                productos = if (cambio) emptyList() else it.productos,
+                categorias = if (cambio) emptyList() else it.categorias,
+                categoria = if (cambio) null else it.categoria,
+                ultimo = if (cambio) null else it.ultimo,
+            )
+        }
+        carrito.elegir(cafeteria)
+        viewModelScope.launch { runCatching { recordar(cafeteria.id) } }
         cargar()
         cargarUltimo()
     }
 
-    /** Si falla no pasa nada: la tarjeta de repetir simplemente no aparece. */
+    /** Si falla no pasa nada: la tarjeta de repetir simplemente no aparece. Solo pedidos de este cafetín. */
     private fun cargarUltimo() {
+        val idCafeteria = carrito.cafeteria.value?.id ?: return
         viewModelScope.launch {
             runCatching { pedidos.historial(0, 5) }.onSuccess { pagina ->
-                val ultimo = pagina.contenido.firstOrNull { it.estadoPago == "PAGADO" && it.estado != "CANCELADO" }
+                val ultimo = pagina.contenido.firstOrNull {
+                    it.estadoPago == "PAGADO" && it.estado != "CANCELADO" && (it.cafeteria == null || it.cafeteria.id == idCafeteria)
+                }
                 _estado.update { it.copy(ultimo = ultimo) }
             }
         }
@@ -77,10 +165,15 @@ class CatalogoViewModel(private val pedidos: Pedidos, val carrito: Carrito) : Vi
     fun navegadoAlCarrito() = _estado.update { it.copy(irAlCarrito = false) }
 
     fun cargar() {
+        val idCafeteria = carrito.cafeteria.value?.id
+        if (idCafeteria == null) {
+            cargarCafeterias(automatica = false)
+            return
+        }
         _estado.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
-                val productos = pedidos.catalogo()
+                val productos = pedidos.catalogo(idCafeteria)
                 carrito.actualizar(productos)
                 val categorias = productos.mapNotNull { it.categoria }.distinct().sorted()
                 _estado.update {
@@ -136,6 +229,7 @@ class CarritoViewModel(
         val e = _estado.value
         val error = when {
             carrito.lineas.value.isEmpty() -> "Tu carrito está vacío"
+            carrito.cafeteria.value == null -> "Elige un cafetín en el catálogo"
             e.hora == null -> "Elige a qué hora pasas a recoger"
             else -> null
         }
@@ -144,6 +238,7 @@ class CarritoViewModel(
             return
         }
         val solicitud = CrearPedidoRequest(
+            idCafeteria = carrito.cafeteria.value!!.id,
             horaRecojo = String.format(Locale.ROOT, "%02d:%02d", e.hora!!.hour, e.hora.minute),
             items = carrito.items(),
             observacion = e.observacion.trim().ifEmpty { null },
@@ -291,13 +386,30 @@ data class HistorialEstado(
 
 class HistorialViewModel(private val pedidos: Pedidos, private val carrito: Carrito = Carrito()) : ViewModel() {
 
-    /** "Volver a pedir": lee el detalle, actualiza precios y stock con el catálogo de hoy y llena el carrito. */
+    /**
+     * "Volver a pedir": lee el detalle, actualiza precios y stock con el catálogo de hoy de su cafetín y llena
+     * el carrito. Si el carrito ya tiene productos de otro cafetín, no los mezcla: avisa.
+     */
     fun volverAPedir(idPedido: Int) {
         _estado.update { it.copy(repitiendo = idPedido, aviso = null) }
         viewModelScope.launch {
             try {
-                val catalogo = pedidos.catalogo().also(carrito::actualizar)
-                val agregadas = carrito.repetir(pedidos.pedido(idPedido).items, catalogo)
+                val pedido = pedidos.pedido(idPedido)
+                val cafeteria = pedido.cafeteria ?: carrito.cafeteria.value
+                if (cafeteria == null) {
+                    _estado.update { it.copy(repitiendo = null, aviso = "Elige un cafetín en el catálogo") }
+                    return@launch
+                }
+                val actual = carrito.cafeteria.value
+                if (actual != null && actual.id != cafeteria.id && carrito.lineas.value.isNotEmpty()) {
+                    _estado.update {
+                        it.copy(repitiendo = null, aviso = "Tu carrito es de ${actual.nombre}. Termina o vacía ese pedido primero")
+                    }
+                    return@launch
+                }
+                carrito.elegir(cafeteria)
+                val catalogo = pedidos.catalogo(cafeteria.id).also(carrito::actualizar)
+                val agregadas = carrito.repetir(pedido.items, catalogo)
                 _estado.update {
                     if (agregadas > 0) it.copy(repitiendo = null, irAlCarrito = true)
                     else it.copy(repitiendo = null, aviso = "Esos productos no están disponibles ahora")

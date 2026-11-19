@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import pe.edu.ucv.cafetin.app.datos.Cafeteria
 import pe.edu.ucv.cafetin.app.datos.ProductoCatalogo
 import pe.edu.ucv.cafetin.app.ui.Acentos
 import pe.edu.ucv.cafetin.app.ui.cuentas.BotonPrincipal
@@ -86,10 +88,32 @@ fun PantallaCatalogo(vm: CatalogoViewModel, nombre: String, alCerrarSesion: () -
         }
     }
 
+    estado.porConfirmar?.let { nueva ->
+        AlertDialog(
+            onDismissRequest = vm::cancelarCambio,
+            title = { Text("¿Cambiar a ${nueva.nombre}?") },
+            text = { Text("Tu carrito tiene productos de ${estado.cafeteria?.nombre}. Un pedido es de un solo cafetín: si cambias, se vacía.") },
+            confirmButton = { TextButton(onClick = vm::confirmarCambio) { Text("Cambiar y vaciar") } },
+            dismissButton = { TextButton(onClick = vm::cancelarCambio) { Text("Seguir en ${estado.cafeteria?.nombre}") } },
+        )
+    }
+
+    if (estado.eligiendo || estado.cafeteria == null) {
+        ElegirCafeteria(
+            estado = estado,
+            nombre = nombre,
+            alElegir = vm::elegir,
+            alReintentar = vm::cambiarCafeteria,
+            alCancelar = if (estado.cafeteria != null) vm::cancelarEleccion else null,
+            alCerrarSesion = alCerrarSesion,
+        )
+        return
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 16.dp)) {
-                item { Cabecera(nombre, alCerrarSesion) }
+                item { Cabecera(nombre, estado.cafeteria, alCerrarSesion, alCambiar = vm::cambiarCafeteria) }
                 estado.ultimo?.let { ultimo ->
                     item {
                         TarjetaRepetir(
@@ -146,7 +170,7 @@ fun PantallaCatalogo(vm: CatalogoViewModel, nombre: String, alCerrarSesion: () -
  * recoger sin fila a una hora concreta (el tiempo de espera es lo que más pesa al elegir dónde comprar).
  */
 @Composable
-private fun Cabecera(nombre: String, alCerrarSesion: () -> Unit) {
+private fun Cabecera(nombre: String, cafeteria: Cafeteria?, alCerrarSesion: () -> Unit, alCambiar: (() -> Unit)? = null) {
     val ahora = remember { LocalTime.now() }
     val primeraHora = remember { horasDeRecojo(ahora).firstOrNull() }
     val degradado = Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))
@@ -173,6 +197,68 @@ private fun Cabecera(nombre: String, alCerrarSesion: () -> Unit) {
             color = Color.White.copy(alpha = 0.9f),
             modifier = Modifier.padding(end = 12.dp),
         )
+        if (cafeteria != null && alCambiar != null) {
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Recoges en ${cafeteria.nombre}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = alCambiar, modifier = Modifier.semantics { contentDescription = "Cambiar de cafetín" }) {
+                    Text("Cambiar", color = Color.White)
+                }
+            }
+        }
+    }
+}
+
+/** Lista de cafetines: el estudiante elige dónde pedir; todo su pedido será de ese cafetín. */
+@Composable
+private fun ElegirCafeteria(
+    estado: CatalogoEstado,
+    nombre: String,
+    alElegir: (Cafeteria) -> Unit,
+    alReintentar: () -> Unit,
+    alCancelar: (() -> Unit)?,
+    alCerrarSesion: () -> Unit,
+) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+        item { Cabecera(nombre, null, alCerrarSesion) }
+        item {
+            Row(Modifier.padding(start = 20.dp, end = 8.dp, top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("¿Dónde vas a recoger?", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).semantics { heading() })
+                alCancelar?.let { TextButton(onClick = it) { Text("Volver") } }
+            }
+        }
+        when {
+            estado.cargando && estado.cafeterias.isEmpty() -> item { Esqueleto() }
+            estado.error != null && estado.cafeterias.isEmpty() -> item {
+                Box(Modifier.heightIn(min = 320.dp)) { ErrorConReintento(estado.error, alReintentar) }
+            }
+            else -> items(estado.cafeterias, key = { it.id }) { c ->
+                val actual = c.id == estado.cafeteria?.id
+                Card(
+                    onClick = { alElegir(c) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).heightIn(min = 72.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (actual) fondoCrema() else MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        AvatarProducto(c.nombre, c.nombre)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(c.nombre, style = MaterialTheme.typography.titleMedium)
+                            c.ubicacion?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        if (actual) Text("Actual", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
     }
 }
 

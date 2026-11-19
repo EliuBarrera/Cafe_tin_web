@@ -5,6 +5,10 @@ import kotlinx.serialization.Serializable
 // Copias de los DTOs de docs/openapi.yaml (paquete Pedidos). Los nombres de campo son los del contrato.
 // Las fechas llegan como texto ISO sin zona (hora de Lima, la pone la base): se muestran tal cual.
 
+/** Cafetín de la plataforma: el estudiante elige uno y todo su pedido es de ese cafetín. */
+@Serializable
+data class Cafeteria(val id: Int, val nombre: String, val ubicacion: String? = null)
+
 /** RF-04. [estadoStock]: DISPONIBLE, "POCAS UNIDADES" o AGOTADO (la tarjeta se deshabilita). */
 @Serializable
 data class ProductoCatalogo(
@@ -25,6 +29,7 @@ data class ItemPedidoRequest(val idProducto: Int, val cantidad: Int)
 /** RF-05. [horaRecojo] en formato HH:mm. */
 @Serializable
 data class CrearPedidoRequest(
+    val idCafeteria: Int,
     val horaRecojo: String,
     val items: List<ItemPedidoRequest>,
     val observacion: String? = null,
@@ -74,6 +79,8 @@ data class PedidoResponse(
     val pago: Pago? = null,
     /** Nulo hasta que el pago queda PAGADO. */
     val recibo: Recibo? = null,
+    /** Cafetín donde se recoge. */
+    val cafeteria: Cafeteria? = null,
 ) {
     val pagado: Boolean get() = pago?.estado == "PAGADO"
 }
@@ -89,6 +96,7 @@ data class PedidoResumen(
     val horaRecojo: String? = null,
     val total: Double,
     val cantidadProductos: Int = 0,
+    val cafeteria: Cafeteria? = null,
 )
 
 @Serializable
