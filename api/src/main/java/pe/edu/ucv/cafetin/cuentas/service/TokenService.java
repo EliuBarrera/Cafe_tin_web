@@ -20,9 +20,12 @@ public class TokenService {
 
 	private final JwtEncoder encoder;
 	private final long expiracionSegundos;
+	private final UsuarioService usuarios;
 
-	public TokenService(JwtEncoder encoder, @Value("${cafetin.jwt.expiracion-segundos}") long expiracionSegundos) {
+	public TokenService(JwtEncoder encoder, @Value("${cafetin.jwt.expiracion-segundos}") long expiracionSegundos,
+			UsuarioService usuarios) {
 		this.encoder = encoder;
+		this.usuarios = usuarios;
 		this.expiracionSegundos = expiracionSegundos;
 	}
 
@@ -36,7 +39,7 @@ public class TokenService {
 				.build();
 		String token = encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
 				.getTokenValue();
-		return new TokenResponse(token, expiracionSegundos, UsuarioService.aRespuesta(usuario));
+		return new TokenResponse(token, expiracionSegundos, usuarios.aRespuesta(usuario));
 	}
 
 }

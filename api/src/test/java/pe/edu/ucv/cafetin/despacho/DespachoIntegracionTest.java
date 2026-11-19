@@ -224,7 +224,7 @@ class DespachoIntegracionTest {
 	private int pedido(String horaRecojo) throws Exception {
 		String json = cuerpo(mvc.perform(post("/api/pedidos").with(como(estudiante, "ESTUDIANTE"))
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"horaRecojo\": \"%s\", \"items\": [{\"idProducto\": %d, \"cantidad\": 2}]}"
+				.content("{\"idCafeteria\": 1, \"horaRecojo\": \"%s\", \"items\": [{\"idProducto\": %d, \"cantidad\": 2}]}"
 						.formatted(horaRecojo, producto)))
 				.andExpect(status().isCreated()));
 		return JsonPath.read(json, "$.id");

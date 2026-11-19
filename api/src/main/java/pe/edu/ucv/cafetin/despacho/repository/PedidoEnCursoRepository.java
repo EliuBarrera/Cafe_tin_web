@@ -11,9 +11,10 @@ import pe.edu.ucv.cafetin.pedidos.modelo.EstadoPedido;
 /** Vista {@code v_pedidos_en_curso} (solo lectura). Incluye pedidos sin pagar: filtra por {@code estadoPago}. */
 public interface PedidoEnCursoRepository extends JpaRepository<PedidoEnCurso, Integer> {
 
-	List<PedidoEnCurso> findByEstadoPagoOrderByHoraRecojoAscIdPedidoAsc(EstadoPago estadoPago);
+	List<PedidoEnCurso> findByIdCafeteriaAndEstadoPagoOrderByHoraRecojoAscIdPedidoAsc(Integer idCafeteria,
+			EstadoPago estadoPago);
 
-	List<PedidoEnCurso> findByEstadoPagoAndEstadoOrderByHoraRecojoAscIdPedidoAsc(EstadoPago estadoPago,
-			EstadoPedido estado);
+	List<PedidoEnCurso> findByIdCafeteriaAndEstadoPagoAndEstadoOrderByHoraRecojoAscIdPedidoAsc(Integer idCafeteria,
+			EstadoPago estadoPago, EstadoPedido estado);
 
 }

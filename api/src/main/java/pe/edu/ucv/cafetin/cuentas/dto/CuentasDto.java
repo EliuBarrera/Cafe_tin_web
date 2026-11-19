@@ -11,6 +11,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import pe.edu.ucv.cafetin.cafeterias.dto.CafeteriaResponse;
 import pe.edu.ucv.cafetin.cuentas.modelo.TipoUsuario;
 import pe.edu.ucv.cafetin.cuentas.modelo.Turno;
 
@@ -51,7 +52,8 @@ public final class CuentasDto {
 			@Schema(example = "Eliú") String nombre,
 			@Schema(example = "Barrera Martínez") String apellidos,
 			@Schema(example = "ebarreram@ucvvirtual.edu.pe") String correo,
-			@Schema(description = "Rol: decide el menú en el panel y el acceso en la API") TipoUsuario rol) {
+			@Schema(description = "Rol: decide el menú en el panel y el acceso en la API") TipoUsuario rol,
+			@Schema(description = "Cafetín del dueño o trabajador; nulo para un estudiante") CafeteriaResponse cafeteria) {
 	}
 
 	@Schema(description = "Pedir el enlace de recuperación de contraseña (RF-03)")

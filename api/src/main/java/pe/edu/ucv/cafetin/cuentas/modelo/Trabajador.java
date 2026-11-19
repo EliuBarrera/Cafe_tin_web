@@ -19,6 +19,10 @@ import jakarta.persistence.Table;
 @PrimaryKeyJoinColumn(name = "id_usuario")
 public class Trabajador extends Usuario {
 
+	/** Cafetería a la que pertenece (V11). */
+	@Column(name = "id_cafeteria", nullable = false, updatable = false)
+	private Integer idCafeteria;
+
 	@Column(name = "codigo_empleado", nullable = false, length = 15, unique = true)
 	private String codigoEmpleado;
 
@@ -34,9 +38,10 @@ public class Trabajador extends Usuario {
 	protected Trabajador() {
 	}
 
-	public Trabajador(String nombre, String apellidos, String correo, String contrasenaHash,
+	public Trabajador(Integer idCafeteria, String nombre, String apellidos, String correo, String contrasenaHash,
 			String codigoEmpleado, Turno turno) {
 		super(nombre, apellidos, correo, contrasenaHash);
+		this.idCafeteria = idCafeteria;
 		this.codigoEmpleado = codigoEmpleado;
 		this.turno = turno;
 	}
@@ -51,5 +56,7 @@ public class Trabajador extends Usuario {
 	public void setTurno(Turno turno) { this.turno = turno; }
 
 	public LocalDate getFechaIngreso() { return fechaIngreso; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

@@ -16,6 +16,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import pe.edu.ucv.cafetin.cafeterias.dto.CafeteriaResponse;
 import pe.edu.ucv.cafetin.pedidos.modelo.EstadoPago;
 import pe.edu.ucv.cafetin.pedidos.modelo.EstadoPedido;
 import pe.edu.ucv.cafetin.pedidos.modelo.MetodoPago;
@@ -30,6 +31,8 @@ public final class PedidosDto {
 
 	@Schema(description = "Pedido armado en el carrito (RF-05)")
 	public record CrearPedidoRequest(
+			@NotNull @Schema(description = "Cafetín del pedido: todos los productos deben ser suyos", example = "1")
+			Integer idCafeteria,
 			@NotNull @JsonFormat(pattern = "HH:mm") @Schema(type = "string", pattern = "^\\d{2}:\\d{2}$",
 					description = "Hora de recojo elegida, formato HH:mm", example = "12:50") LocalTime horaRecojo,
 			@Size(max = 250) @Schema(example = "Sin ají, por favor") String observacion,
@@ -72,6 +75,7 @@ public final class PedidosDto {
 	public record PedidoResponse(
 			@Schema(example = "2") Integer id,
 			@Schema(example = "PED-0426") String codigoPedido,
+			@Schema(description = "Cafetín donde se recoge") CafeteriaResponse cafeteria,
 			EstadoPedido estado,
 			LocalDateTime fechaHora,
 			@JsonFormat(pattern = "HH:mm") @Schema(type = "string", example = "12:50") LocalTime horaRecojo,
@@ -111,6 +115,7 @@ public final class PedidosDto {
 	public record PedidoResumenResponse(
 			Integer id,
 			@Schema(example = "PED-0425") String codigoPedido,
+			@Schema(description = "Cafetín donde se recoge") CafeteriaResponse cafeteria,
 			EstadoPedido estado,
 			@Schema(description = "Nulo si nunca se intentó pagar") EstadoPago estadoPago,
 			LocalDateTime fechaHora,

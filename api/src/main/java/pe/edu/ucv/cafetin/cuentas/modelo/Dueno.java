@@ -13,6 +13,10 @@ import jakarta.persistence.Table;
 @PrimaryKeyJoinColumn(name = "id_usuario")
 public class Dueno extends Usuario {
 
+	/** Cafetería a la que pertenece (V11). */
+	@Column(name = "id_cafeteria", nullable = false, updatable = false)
+	private Integer idCafeteria;
+
 	@Column(nullable = false, length = 60)
 	private String cargo = "Propietario";
 
@@ -23,8 +27,9 @@ public class Dueno extends Usuario {
 	protected Dueno() {
 	}
 
-	public Dueno(String nombre, String apellidos, String correo, String contrasenaHash) {
+	public Dueno(Integer idCafeteria, String nombre, String apellidos, String correo, String contrasenaHash) {
 		super(nombre, apellidos, correo, contrasenaHash);
+		this.idCafeteria = idCafeteria;
 	}
 
 	@Override
@@ -35,5 +40,7 @@ public class Dueno extends Usuario {
 
 	public String getRuc() { return ruc; }
 	public void setRuc(String ruc) { this.ruc = ruc; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

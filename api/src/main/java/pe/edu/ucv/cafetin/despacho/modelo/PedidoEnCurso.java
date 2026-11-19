@@ -56,6 +56,9 @@ public class PedidoEnCurso {
 	@Column(name = "codigo_verificacion")
 	private String codigoVerificacion;
 
+	@Column(name = "id_cafeteria")
+	private Integer idCafeteria;
+
 	protected PedidoEnCurso() {
 	}
 
@@ -68,5 +71,7 @@ public class PedidoEnCurso {
 	public EstadoPago getEstadoPago() { return estadoPago; }
 	public MetodoPago getMetodoPago() { return metodoPago; }
 	public String getCodigoVerificacion() { return codigoVerificacion; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

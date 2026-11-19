@@ -34,7 +34,8 @@ import pe.edu.ucv.cafetin.pedidos.service.TransicionesPedido;
 /**
  * Tablero de despacho (RF-10 a RF-14). Los cambios de estado los decide {@link TransicionesPedido};
  * aquí solo se agregan las reglas propias del despacho (asignar trabajador, verificar el recibo antes
- * de entregar) y la notificación al estudiante. Nunca devuelve el código de verificación (RF-13).
+ * de entregar) y la notificación al estudiante. Cada trabajador o dueño solo ve y mueve los pedidos de su
+ * cafetería: uno de otra responde 404. Nunca devuelve el código de verificación (RF-13).
  */
 @Service
 public class DespachoService {
@@ -63,17 +64,18 @@ public class DespachoService {
 
 	/** RF-10. Solo pagados, por hora de recojo. Un estado que no está en curso devuelve la lista vacía. */
 	@Transactional(readOnly = true)
-	public List<PedidoDespachoResponse> listar(EstadoPedido estado) {
+	public List<PedidoDespachoResponse> listar(Integer idCafeteria, EstadoPedido estado) {
 		List<PedidoEnCurso> filas = estado == null
-				? enCurso.findByEstadoPagoOrderByHoraRecojoAscIdPedidoAsc(EstadoPago.PAGADO)
-				: enCurso.findByEstadoPagoAndEstadoOrderByHoraRecojoAscIdPedidoAsc(EstadoPago.PAGADO, estado);
+				? enCurso.findByIdCafeteriaAndEstadoPagoOrderByHoraRecojoAscIdPedidoAsc(idCafeteria, EstadoPago.PAGADO)
+				: enCurso.findByIdCafeteriaAndEstadoPagoAndEstadoOrderByHoraRecojoAscIdPedidoAsc(idCafeteria,
+						EstadoPago.PAGADO, estado);
 		return aRespuestas(filas.stream().map(PedidoEnCurso::getIdPedido).toList());
 	}
 
 	/** RF-11. Asigna al trabajador autenticado; si confirma el dueño, queda sin trabajador (la FK es a trabajador). */
 	@Transactional
-	public PedidoDespachoResponse confirmar(Integer idUsuario, Integer idPedido) {
-		Pedido pedido = bloquear(idPedido);
+	public PedidoDespachoResponse confirmar(Integer idCafeteria, Integer idUsuario, Integer idPedido) {
+		Pedido pedido = bloquear(idCafeteria, idPedido);
 		transiciones.aplicar(pedido, EstadoPedido.CONFIRMADO, pagado(idPedido));
 		trabajadores.findById(idUsuario).ifPresent(pedido::setTrabajador);
 		notificar(pedido, TipoNotificacion.PEDIDO_CONFIRMADO, "Tu pedido %s fue confirmado y pronto lo prepararemos.");
@@ -82,16 +84,16 @@ public class DespachoService {
 
 	/** RF-11. CONFIRMADO → EN_PREPARACION (sin aviso al estudiante: no hay tipo de notificación para ello). */
 	@Transactional
-	public PedidoDespachoResponse preparar(Integer idPedido) {
-		Pedido pedido = bloquear(idPedido);
+	public PedidoDespachoResponse preparar(Integer idCafeteria, Integer idPedido) {
+		Pedido pedido = bloquear(idCafeteria, idPedido);
 		transiciones.aplicar(pedido, EstadoPedido.EN_PREPARACION, pagado(idPedido));
 		return aRespuesta(pedido);
 	}
 
 	/** RF-12. */
 	@Transactional
-	public PedidoDespachoResponse listo(Integer idPedido) {
-		Pedido pedido = bloquear(idPedido);
+	public PedidoDespachoResponse listo(Integer idCafeteria, Integer idPedido) {
+		Pedido pedido = bloquear(idCafeteria, idPedido);
 		transiciones.aplicar(pedido, EstadoPedido.LISTO, pagado(idPedido));
 		notificar(pedido, TipoNotificacion.PEDIDO_LISTO, "Tu pedido %s está listo. Acércate a recogerlo con tu recibo.");
 		return aRespuesta(pedido);
@@ -99,8 +101,8 @@ public class DespachoService {
 
 	/** RF-13. El pedido debe estar LISTO y el código coincidir con el del recibo; si ya estaba verificado, no cambia nada. */
 	@Transactional
-	public PedidoDespachoResponse verificar(Integer idPedido, String codigo) {
-		Pedido pedido = bloquear(idPedido);
+	public PedidoDespachoResponse verificar(Integer idCafeteria, Integer idPedido, String codigo) {
+		Pedido pedido = bloquear(idCafeteria, idPedido);
 		if (pedido.getEstado() != EstadoPedido.LISTO) {
 			throw new ApiException.ReglaNegocio("El recibo se verifica cuando el pedido está LISTO (ahora está "
 					+ pedido.getEstado() + ")");
@@ -118,8 +120,8 @@ public class DespachoService {
 
 	/** RF-14. LISTO → ENTREGADO; exige el recibo verificado. */
 	@Transactional
-	public PedidoDespachoResponse entregar(Integer idPedido) {
-		Pedido pedido = bloquear(idPedido);
+	public PedidoDespachoResponse entregar(Integer idCafeteria, Integer idPedido) {
+		Pedido pedido = bloquear(idCafeteria, idPedido);
 		transiciones.validar(pedido.getEstado(), EstadoPedido.ENTREGADO, pagado(idPedido));
 		boolean verificado = recibos.findByPagoPedidoId(idPedido).map(Recibo::isVerificado).orElse(false);
 		if (!verificado) {
@@ -132,8 +134,8 @@ public class DespachoService {
 
 	// ------------------------------------------------------------------ ayudas
 
-	private Pedido bloquear(Integer idPedido) {
-		return pedidos.paraDespacho(idPedido)
+	private Pedido bloquear(Integer idCafeteria, Integer idPedido) {
+		return pedidos.paraDespacho(idPedido, idCafeteria)
 				.orElseThrow(() -> new ApiException.NoEncontrado("No existe el pedido " + idPedido));
 	}
 

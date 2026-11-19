@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import pe.edu.ucv.cafetin.cuentas.seguridad.UsuarioActual;
 import pe.edu.ucv.cafetin.comun.dto.Pagina;
 import pe.edu.ucv.cafetin.reportes.dto.ReportesDto.IngresoPeriodoResponse;
 import pe.edu.ucv.cafetin.reportes.dto.ReportesDto.Periodo;
@@ -29,8 +30,11 @@ public class ReporteController {
 
 	private final ReporteService servicio;
 
-	public ReporteController(ReporteService servicio) {
+	private final UsuarioActual usuarioActual;
+
+	public ReporteController(ReporteService servicio, UsuarioActual usuarioActual) {
 		this.servicio = servicio;
+		this.usuarioActual = usuarioActual;
 	}
 
 	@GetMapping("/ingresos")
@@ -43,14 +47,14 @@ public class ReporteController {
 			@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
 			@Parameter(description = "Hasta (incluido), yyyy-MM-dd") @RequestParam(required = false)
 			@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
-		return servicio.ingresos(periodo, desde, hasta);
+		return servicio.ingresos(usuarioActual.cafeteria(), periodo, desde, hasta);
 	}
 
 	@GetMapping("/mas-vendidos")
 	@Operation(summary = "Productos más vendidos", description = "DUENO · RF-22. Ordenados por unidades vendidas, de todo el histórico.")
 	public List<ProductoVendidoResponse> masVendidos(
 			@RequestParam(defaultValue = "10") @Min(1) @Max(100) int limite) {
-		return servicio.masVendidos(limite);
+		return servicio.masVendidos(usuarioActual.cafeteria(), limite);
 	}
 
 	@GetMapping("/ventas")
@@ -60,7 +64,7 @@ public class ReporteController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
 			@RequestParam(defaultValue = "0") @Min(0) int pagina,
 			@RequestParam(defaultValue = "50") @Min(1) @Max(200) int tamano) {
-		return servicio.ventas(desde, hasta, pagina, tamano);
+		return servicio.ventas(usuarioActual.cafeteria(), desde, hasta, pagina, tamano);
 	}
 
 }

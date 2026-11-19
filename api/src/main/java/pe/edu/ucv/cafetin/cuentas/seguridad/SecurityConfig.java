@@ -72,7 +72,7 @@ public class SecurityConfig {
 						.requestMatchers("/api/inventario/**", "/api/productos/**", "/api/alertas/**",
 								"/api/reportes/**", "/api/trabajadores/**", "/api/proveedores/**").hasRole("DUENO")
 
-						.requestMatchers(HttpMethod.GET, "/api/catalogo", "/api/categorias").authenticated()
+						.requestMatchers(HttpMethod.GET, "/api/catalogo", "/api/categorias", "/api/cafeterias").authenticated()
 						.requestMatchers("/api/categorias/**").hasRole("DUENO")
 						.requestMatchers("/api/usuarios/me/**").authenticated()
 						.anyRequest().denyAll())

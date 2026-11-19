@@ -29,6 +29,10 @@ public class Producto {
 	@Column(name = "id_producto")
 	private Integer id;
 
+	/** Cafetería a la que pertenece (V11). */
+	@Column(name = "id_cafeteria", nullable = false, updatable = false)
+	private Integer idCafeteria;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "id_categoria", nullable = false)
 	private Categoria categoria;
@@ -38,7 +42,7 @@ public class Producto {
 	@JoinColumn(name = "id_proveedor")
 	private Proveedor proveedor;
 
-	@Column(nullable = false, length = 100, unique = true)
+	@Column(nullable = false, length = 100)
 	private String nombre;
 
 	@Column(length = 250)
@@ -61,6 +65,7 @@ public class Producto {
 	}
 
 	public Producto(Categoria categoria, String nombre, BigDecimal precio) {
+		this.idCafeteria = categoria.getIdCafeteria(); // la del dueño que lo registra
 		this.categoria = categoria;
 		this.nombre = nombre;
 		this.precio = precio;
@@ -90,5 +95,7 @@ public class Producto {
 	public void setActivo(boolean activo) { this.activo = activo; }
 
 	public LocalDateTime getFechaRegistro() { return fechaRegistro; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

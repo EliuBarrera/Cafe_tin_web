@@ -36,6 +36,9 @@ public class CatalogoDisponible {
 	@Column(name = "estado_stock")
 	private String estadoStock;
 
+	@Column(name = "id_cafeteria")
+	private Integer idCafeteria;
+
 	protected CatalogoDisponible() {
 	}
 
@@ -46,5 +49,7 @@ public class CatalogoDisponible {
 	public String getCategoria() { return categoria; }
 	public Integer getCantidadDisponible() { return cantidadDisponible; }
 	public String getEstadoStock() { return estadoStock; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

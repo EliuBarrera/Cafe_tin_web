@@ -168,7 +168,7 @@ class TrabajadorIntegracionTest {
 	private String bearerDueno() throws Exception {
 		int n = SECUENCIA.incrementAndGet();
 		String correo = "dueno" + n + "@cafetin.pe";
-		usuarios.save(new Dueno("Rosa", "Prueba", correo, encoder.encode(CLAVE)));
+		usuarios.save(new Dueno(1, "Rosa", "Prueba", correo, encoder.encode(CLAVE)));
 		return "Bearer " + JsonPath.read(login(correo).andExpect(status().isOk()).andReturn().getResponse()
 				.getContentAsString(StandardCharsets.UTF_8), "$.token");
 	}

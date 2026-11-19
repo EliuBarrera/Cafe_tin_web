@@ -191,7 +191,7 @@ class PushEstadoPedidoIntegracionTest {
 	private int pedidoPagado() throws Exception {
 		String json = mvc.perform(post("/api/pedidos").with(como(estudiante, "ESTUDIANTE"))
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"horaRecojo\": \"12:30\", \"items\": [{\"idProducto\": %d, \"cantidad\": 1}]}"
+				.content("{\"idCafeteria\": 1, \"horaRecojo\": \"12:30\", \"items\": [{\"idProducto\": %d, \"cantidad\": 1}]}"
 						.formatted(producto)))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);

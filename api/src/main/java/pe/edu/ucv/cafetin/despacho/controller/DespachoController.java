@@ -49,7 +49,7 @@ public class DespachoController {
 	public List<PedidoDespachoResponse> listar(
 			@Parameter(description = "Filtrar por un estado; vacío = todos los en curso")
 			@RequestParam(required = false) EstadoPedido estado) {
-		return servicio.listar(estado);
+		return servicio.listar(usuario.cafeteria(), estado);
 	}
 
 	@PostMapping("/{id}/confirmar")
@@ -57,7 +57,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "Transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse confirmar(@PathVariable Integer id) {
-		return servicio.confirmar(usuario.id(), id);
+		return servicio.confirmar(usuario.cafeteria(), usuario.id(), id);
 	}
 
 	@PostMapping("/{id}/preparar")
@@ -65,7 +65,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "Transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse preparar(@PathVariable Integer id) {
-		return servicio.preparar(id);
+		return servicio.preparar(usuario.cafeteria(), id);
 	}
 
 	@PostMapping("/{id}/listo")
@@ -73,7 +73,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "Transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse listo(@PathVariable Integer id) {
-		return servicio.listo(id);
+		return servicio.listo(usuario.cafeteria(), id);
 	}
 
 	@PostMapping("/{id}/verificar")
@@ -81,7 +81,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "El código no coincide o el pedido no está LISTO (REGLA_NEGOCIO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse verificar(@PathVariable Integer id, @Valid @RequestBody VerificarReciboRequest solicitud) {
-		return servicio.verificar(id, solicitud.codigoVerificacion());
+		return servicio.verificar(usuario.cafeteria(), id, solicitud.codigoVerificacion());
 	}
 
 	@PostMapping("/{id}/entregar")
@@ -89,7 +89,7 @@ public class DespachoController {
 	@ApiResponse(responseCode = "409", description = "Recibo sin verificar (REGLA_NEGOCIO) o transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoDespachoResponse entregar(@PathVariable Integer id) {
-		return servicio.entregar(id);
+		return servicio.entregar(usuario.cafeteria(), id);
 	}
 
 }

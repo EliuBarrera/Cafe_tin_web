@@ -82,7 +82,7 @@ class ProductoIntegracionTest {
 
 		assertThat(jdbc.queryForObject("SELECT cantidad_disponible FROM inventario WHERE id_producto = ?", Integer.class, id))
 				.isEqualTo(30);
-		mvc.perform(get("/api/catalogo").with(como(datos.estudiante(), "ESTUDIANTE")))
+		mvc.perform(get("/api/catalogo").param("cafeteria", "1").with(como(datos.estudiante(), "ESTUDIANTE")))
 				.andExpect(jsonPath("$[*].idProducto", hasItem(id)));
 	}
 
@@ -222,11 +222,11 @@ class ProductoIntegracionTest {
 		int estudiante = datos.estudiante();
 
 		cambiarEstado(id, false).andExpect(status().isOk()).andExpect(jsonPath("$.activo").value(false));
-		mvc.perform(get("/api/catalogo").with(como(estudiante, "ESTUDIANTE")))
+		mvc.perform(get("/api/catalogo").param("cafeteria", "1").with(como(estudiante, "ESTUDIANTE")))
 				.andExpect(jsonPath("$[*].idProducto", not(hasItem(id))));
 
 		cambiarEstado(id, true).andExpect(status().isOk()).andExpect(jsonPath("$.activo").value(true));
-		mvc.perform(get("/api/catalogo").with(como(estudiante, "ESTUDIANTE")))
+		mvc.perform(get("/api/catalogo").param("cafeteria", "1").with(como(estudiante, "ESTUDIANTE")))
 				.andExpect(jsonPath("$[*].idProducto", hasItem(id)));
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM producto WHERE id_producto = ?", Integer.class, id)).isEqualTo(1);
 	}

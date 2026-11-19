@@ -23,6 +23,7 @@ import pe.edu.ucv.cafetin.inventario.repository.ProveedorRepository;
 
 /**
  * Productos del dueño: alta con stock inicial (RF-15), recarga (RF-18) y ver, editar y deshabilitar (RF-19).
+ * Cada dueño gestiona los productos de su cafetería: uno de otra se trata como inexistente (404).
  * El stock solo cambia con la venta (trigger) o la recarga; la edición solo toca el mínimo.
  */
 @Service
@@ -44,24 +45,24 @@ public class ProductoService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<ProductoResponse> listar(Boolean activo) {
-		return inventarios.conProducto(activo).stream().map(ProductoService::aRespuesta).toList();
+	public List<ProductoResponse> listar(Integer idCafeteria, Boolean activo) {
+		return inventarios.conProducto(idCafeteria, activo).stream().map(ProductoService::aRespuesta).toList();
 	}
 
 	@Transactional(readOnly = true)
-	public ProductoResponse obtener(Integer id) {
-		return aRespuesta(inventarioDe(id));
+	public ProductoResponse obtener(Integer idCafeteria, Integer id) {
+		return aRespuesta(inventarioDe(idCafeteria, id));
 	}
 
 	/** RF-15. Producto e inventario en la misma transacción: si uno falla, no queda ninguno. */
 	@Transactional
-	public ProductoResponse registrar(ProductoRequest s) {
+	public ProductoResponse registrar(Integer idCafeteria, ProductoRequest s) {
 		String nombre = s.nombre().trim();
-		if (productos.existsByNombre(nombre)) {
+		if (productos.existsByIdCafeteriaAndNombre(idCafeteria, nombre)) {
 			throw nombreRepetido(nombre);
 		}
-		Producto producto = new Producto(categoriaActiva(s.idCategoria()), nombre, s.precio());
-		producto.setProveedor(s.idProveedor() == null ? null : proveedorActivo(s.idProveedor()));
+		Producto producto = new Producto(categoriaActiva(idCafeteria, s.idCategoria()), nombre, s.precio());
+		producto.setProveedor(s.idProveedor() == null ? null : proveedorActivo(idCafeteria, s.idProveedor()));
 		producto.setDescripcion(s.descripcion());
 		producto.setImagenUrl(s.imagenUrl());
 		productos.save(producto);
@@ -71,22 +72,22 @@ public class ProductoService {
 
 	/** RF-19. El precio nuevo no toca pedidos anteriores: cada detalle guarda su precio_unitario. */
 	@Transactional
-	public ProductoResponse actualizar(Integer id, ProductoActualizarRequest s) {
-		Inventario inventario = inventarioDe(id);
+	public ProductoResponse actualizar(Integer idCafeteria, Integer id, ProductoActualizarRequest s) {
+		Inventario inventario = inventarioDe(idCafeteria, id);
 		Producto producto = inventario.getProducto();
 		String nombre = s.nombre().trim();
-		if (productos.existsByNombreAndIdNot(nombre, id)) {
+		if (productos.existsByIdCafeteriaAndNombreAndIdNot(idCafeteria, nombre, id)) {
 			throw nombreRepetido(nombre);
 		}
 		// Una categoría o proveedor ya asignado se conserva aunque se haya desactivado; uno nuevo debe estar activo.
 		if (!producto.getCategoria().getId().equals(s.idCategoria())) {
-			producto.setCategoria(categoriaActiva(s.idCategoria()));
+			producto.setCategoria(categoriaActiva(idCafeteria, s.idCategoria()));
 		}
 		Integer proveedorActual = producto.getProveedor() == null ? null : producto.getProveedor().getId();
 		if (s.idProveedor() == null) {
 			producto.setProveedor(null);
 		} else if (!s.idProveedor().equals(proveedorActual)) {
-			producto.setProveedor(proveedorActivo(s.idProveedor()));
+			producto.setProveedor(proveedorActivo(idCafeteria, s.idProveedor()));
 		}
 		producto.setNombre(nombre);
 		producto.setDescripcion(s.descripcion());
@@ -99,8 +100,8 @@ public class ProductoService {
 
 	/** RF-19. Deshabilitado = fuera del catálogo y de nuevos pedidos, sin borrarlo. */
 	@Transactional
-	public ProductoResponse cambiarEstado(Integer id, boolean activo) {
-		Inventario inventario = inventarioDe(id);
+	public ProductoResponse cambiarEstado(Integer idCafeteria, Integer id, boolean activo) {
+		Inventario inventario = inventarioDe(idCafeteria, id);
 		inventario.getProducto().setActivo(activo);
 		return aRespuesta(inventario);
 	}
@@ -110,29 +111,29 @@ public class ProductoService {
 	 * del producto. Subir el stock no genera alertas: el trigger solo alerta al bajar.
 	 */
 	@Transactional
-	public InventarioResponse recargar(Integer idProducto, int cantidad) {
-		Integer idInventario = inventarioDe(idProducto).getId();
+	public InventarioResponse recargar(Integer idCafeteria, Integer idProducto, int cantidad) {
+		Integer idInventario = inventarioDe(idCafeteria, idProducto).getId();
 		inventarios.recargar(idProducto, cantidad);
 		alertas.atenderDeInventario(idInventario);
-		Inventario i = inventarioDe(idProducto); // releído: la suma y la fecha las hizo la base
+		Inventario i = inventarioDe(idCafeteria, idProducto); // releído: la suma y la fecha las hizo la base
 		return new InventarioResponse(idProducto, i.getProducto().getNombre(), i.getCantidadDisponible(),
 				i.getStockMinimo(), i.getFechaActualizacion());
 	}
 
 	// ------------------------------------------------------------------ ayudas
 
-	private Inventario inventarioDe(Integer idProducto) {
-		return inventarios.deProducto(idProducto)
+	private Inventario inventarioDe(Integer idCafeteria, Integer idProducto) {
+		return inventarios.deProducto(idProducto).filter(i -> i.getProducto().getIdCafeteria().equals(idCafeteria))
 				.orElseThrow(() -> new ApiException.NoEncontrado("No existe el producto " + idProducto));
 	}
 
-	private Categoria categoriaActiva(Integer id) {
-		return categorias.findById(id).filter(Categoria::isActivo)
+	private Categoria categoriaActiva(Integer idCafeteria, Integer id) {
+		return categorias.findByIdAndIdCafeteria(id, idCafeteria).filter(Categoria::isActivo)
 				.orElseThrow(() -> new ApiException.ReglaNegocio("La categoría " + id + " no existe o está desactivada"));
 	}
 
-	private Proveedor proveedorActivo(Integer id) {
-		return proveedores.findById(id).filter(Proveedor::isActivo)
+	private Proveedor proveedorActivo(Integer idCafeteria, Integer id) {
+		return proveedores.findByIdAndIdCafeteria(id, idCafeteria).filter(Proveedor::isActivo)
 				.orElseThrow(() -> new ApiException.ReglaNegocio("El proveedor " + id + " no existe o está desactivado"));
 	}
 

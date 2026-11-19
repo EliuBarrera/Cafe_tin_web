@@ -1,6 +1,7 @@
 package pe.edu.ucv.cafetin.inventario.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -8,10 +9,12 @@ import pe.edu.ucv.cafetin.inventario.modelo.Categoria;
 
 public interface CategoriaRepository extends JpaRepository<Categoria, Integer> {
 
-	List<Categoria> findByActivoTrueOrderByNombreAsc();
+	List<Categoria> findByIdCafeteriaAndActivoTrueOrderByNombreAsc(Integer idCafeteria);
 
-	boolean existsByNombre(String nombre);
+	Optional<Categoria> findByIdAndIdCafeteria(Integer id, Integer idCafeteria);
 
-	boolean existsByNombreAndIdNot(String nombre, Integer id);
+	boolean existsByIdCafeteriaAndNombre(Integer idCafeteria, String nombre);
+
+	boolean existsByIdCafeteriaAndNombreAndIdNot(Integer idCafeteria, String nombre, Integer id);
 
 }

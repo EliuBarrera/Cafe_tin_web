@@ -15,9 +15,9 @@ public interface InventarioRepository extends JpaRepository<Inventario, Integer>
 
 	@Query("""
 			select i from Inventario i join fetch i.producto p join fetch p.categoria left join fetch p.proveedor
-			where :activo is null or p.activo = :activo
+			where p.idCafeteria = :idCafeteria and (:activo is null or p.activo = :activo)
 			order by p.nombre""")
-	List<Inventario> conProducto(@Param("activo") Boolean activo);
+	List<Inventario> conProducto(@Param("idCafeteria") Integer idCafeteria, @Param("activo") Boolean activo);
 
 	@Query("""
 			select i from Inventario i join fetch i.producto p join fetch p.categoria left join fetch p.proveedor

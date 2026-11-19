@@ -29,7 +29,7 @@ paths:
       description: |-
         DUENO · RF-17. Más recientes primero, con el teléfono del proveedor.
         El panel consulta cada 5 s para el contador de alertas.
-      operationId: listar_6
+      operationId: listar_7
       parameters:
       - description: false = solo pendientes (por defecto); true = solo atendidas
         in: query
@@ -263,14 +263,64 @@ paths:
       summary: Restablecer contraseña
       tags:
       - Cuentas
+  /api/cafeterias:
+    get:
+      description: |-
+        Autenticado (cualquier rol). Cafetines activos por nombre: el estudiante elige uno antes de ver
+        el catálogo y todo su pedido es de ese cafetín.
+      operationId: listar_6
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CafeteriaResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Listar cafetines
+      tags:
+      - Pedidos
   /api/catalogo:
     get:
       description: |-
-        Autenticado (cualquier rol) · RF-04. Productos activos con su stock; incluye los AGOTADO
+        Autenticado (cualquier rol) · RF-04. Productos activos del cafetín con su stock; incluye los AGOTADO
         para que la app los muestre deshabilitados. "Tiempo real": la app vuelve a consultar al abrir
         la pantalla y antes de pagar.
       operationId: listar_5
       parameters:
+      - description: Id del cafetín
+        example: 1
+        in: query
+        name: cafeteria
+        required: true
+        schema:
+          type: integer
+          format: int32
       - description: Id de categoría para filtrar
         in: query
         name: categoria
@@ -316,8 +366,18 @@ paths:
       - Pedidos
   /api/categorias:
     get:
-      description: Autenticado (cualquier rol) · RF-04. Para los filtros del catálogo.
+      description: |-
+        Autenticado (cualquier rol) · RF-04. Para los filtros del catálogo. El estudiante indica el cafetín;
+        el dueño y el trabajador ven las de su cafetería si lo omiten.
       operationId: listar_3
+      parameters:
+      - description: Id del cafetín; obligatorio para el estudiante
+        in: query
+        name: cafeteria
+        required: false
+        schema:
+          type: integer
+          format: int32
       responses:
         "200":
           content:
@@ -2181,6 +2241,20 @@ components:
           enum:
           - STOCK_BAJO
           - STOCK_AGOTADO
+    CafeteriaResponse:
+      type: object
+      description: Cafetín de la plataforma
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        nombre:
+          type: string
+          example: Cafetín principal
+        ubicacion:
+          type: string
+          example: "Campus UCV, pabellón A"
     CampoError:
       type: object
       description: Error de un campo
@@ -2230,6 +2304,11 @@ components:
           description: "Hora de recojo elegida, formato HH:mm"
           example: 12:50
           pattern: "^\\d{2}:\\d{2}$"
+        idCafeteria:
+          type: integer
+          format: int32
+          description: "Cafetín del pedido: todos los productos deben ser suyos"
+          example: 1
         items:
           type: array
           description: "Productos del pedido, sin repetir producto"
@@ -2244,6 +2323,7 @@ components:
           minLength: 0
       required:
       - horaRecojo
+      - idCafeteria
       - items
     ErrorRespuesta:
       description: Error de la API
@@ -2548,6 +2628,9 @@ components:
       type: object
       description: "Pedido con su detalle, pago y recibo"
       properties:
+        cafeteria:
+          $ref: "#/components/schemas/CafeteriaResponse"
+          description: Cafetín donde se recoge
         codigoPedido:
           type: string
           example: PED-0426
@@ -2590,6 +2673,9 @@ components:
       type: object
       description: Pedido en el historial (RF-09)
       properties:
+        cafeteria:
+          $ref: "#/components/schemas/CafeteriaResponse"
+          description: Cafetín donde se recoge
         cantidadProductos:
           type: integer
           format: int32
@@ -3044,6 +3130,9 @@ components:
         apellidos:
           type: string
           example: Barrera Martínez
+        cafeteria:
+          $ref: "#/components/schemas/CafeteriaResponse"
+          description: Cafetín del dueño o trabajador; nulo para un estudiante
         correo:
           type: string
           example: ebarreram@ucvvirtual.edu.pe

@@ -15,8 +15,11 @@ import pe.edu.ucv.cafetin.inventario.modelo.Inventario;
  */
 public interface StockPedidoRepository extends Repository<Inventario, Integer> {
 
-	/** Inventario con su producto, solo de productos activos (los dados de baja no se venden). */
-	@Query("select i from Inventario i join fetch i.producto p where p.id in :ids and p.activo = true")
-	List<Inventario> deProductosActivos(@Param("ids") Collection<Integer> idsProducto);
+	/** Inventario con su producto, solo de productos activos de la cafetería (los dados de baja no se venden). */
+	@Query("""
+			select i from Inventario i join fetch i.producto p
+			where p.id in :ids and p.activo = true and p.idCafeteria = :idCafeteria""")
+	List<Inventario> deProductosActivos(@Param("idCafeteria") Integer idCafeteria,
+			@Param("ids") Collection<Integer> idsProducto);
 
 }
