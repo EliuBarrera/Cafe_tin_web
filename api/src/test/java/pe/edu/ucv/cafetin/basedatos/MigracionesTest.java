@@ -40,7 +40,7 @@ class MigracionesTest {
 	}
 
 	@Test
-	void esquemaTiene15TablasY5Vistas() {
+	void esquemaTiene16TablasY5Vistas() {
 		Integer tablas = jdbc.queryForObject("""
 				SELECT count(*) FROM information_schema.tables
 				WHERE table_schema = 'cafetin' AND table_type = 'BASE TABLE'
@@ -49,7 +49,7 @@ class MigracionesTest {
 				SELECT table_name FROM information_schema.views
 				WHERE table_schema = 'cafetin' ORDER BY table_name""", String.class);
 
-		assertThat(tablas).isEqualTo(15); // las 14 del diagrama de clases + cafeteria (V11)
+		assertThat(tablas).isEqualTo(16); // las 14 del diagrama de clases + cafeteria (V11) + oauth_estado (V13)
 		assertThat(vistas).containsExactly("v_alertas_reposicion", "v_catalogo_disponible",
 				"v_ingresos_diarios", "v_pedidos_en_curso", "v_productos_mas_vendidos");
 	}

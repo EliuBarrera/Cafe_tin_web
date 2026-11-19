@@ -72,6 +72,23 @@ cafetin:
     registrar-enlace: false           # true solo en dev: escribe el token en el log
   correo:
     remitente: ${MAIL_FROM:}          # vacío = la cuenta SMTP (spring.mail.username)
+  # Cobro (RF-06). simulada = cobra al instante sin credenciales (tests y desarrollo);
+  # mercadopago = Checkout Pro en la cuenta de cada cafetín (docs/mercadopago.md).
+  pagos:
+    pasarela: ${CAFETIN_PAGOS_PASARELA:simulada}
+    comision: ${CAFETIN_PAGOS_COMISION:0}         # 0.05 = la plataforma se queda el 5 %
+    moneda: ${CAFETIN_PAGOS_MONEDA:PEN}           # COP con la aplicación de prueba colombiana
+  mercadopago:
+    client-id: ${MP_CLIENT_ID:}
+    client-secret: ${MP_CLIENT_SECRET:}
+    webhook-secret: ${MP_WEBHOOK_SECRET:}
+    url-api: https://api.mercadopago.com
+    url-autorizacion: ${MP_URL_AUTORIZACION:https://auth.mercadopago.com/authorization}
+    url-publica-api: ${CAFETIN_URL_PUBLICA_API:http://localhost:8080}
+    url-panel: ${CAFETIN_URL_PANEL:http://localhost:5173}
+    url-retorno-app: cafetin://pago/
+  cifrado:
+    llave: ${CAFETIN_CIFRADO_LLAVE:}  # 32 bytes en Base64: openssl rand -base64 32
 
 springdoc:
   swagger-ui:

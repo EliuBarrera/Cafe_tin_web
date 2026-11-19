@@ -1,6 +1,5 @@
 package pe.edu.ucv.cafetin.pedidos.service;
 
-import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -21,6 +20,8 @@ import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.comun.error.CodigoError;
 import pe.edu.ucv.cafetin.cuentas.repository.EstudianteRepository;
 import pe.edu.ucv.cafetin.inventario.modelo.Inventario;
+import pe.edu.ucv.cafetin.mercadopago.config.PagosPropiedades;
+import pe.edu.ucv.cafetin.mercadopago.service.CobroMercadoPagoService;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.CrearPedidoRequest;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.ItemPedidoRequest;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.LineaPedidoResponse;
@@ -33,7 +34,6 @@ import pe.edu.ucv.cafetin.pedidos.modelo.EstadoPedido;
 import pe.edu.ucv.cafetin.pedidos.modelo.MetodoPago;
 import pe.edu.ucv.cafetin.pedidos.modelo.Pago;
 import pe.edu.ucv.cafetin.pedidos.modelo.Pedido;
-import pe.edu.ucv.cafetin.pedidos.modelo.Recibo;
 import pe.edu.ucv.cafetin.pedidos.repository.PagoRepository;
 import pe.edu.ucv.cafetin.pedidos.repository.PedidoRepository;
 import pe.edu.ucv.cafetin.pedidos.repository.ReciboRepository;
@@ -56,12 +56,15 @@ public class PedidoService {
 	private final TransicionesPedido transiciones;
 	private final PasarelaPago pasarela;
 	private final CafeteriaRepository cafeterias;
+	private final EmisorRecibos emisor;
+	private final CobroMercadoPagoService mercadoPago;
+	private final PagosPropiedades config;
 	private final EntityManager em;
-	private final SecureRandom azar = new SecureRandom();
 
 	public PedidoService(PedidoRepository pedidos, PagoRepository pagos, ReciboRepository recibos,
 			StockPedidoRepository stock, EstudianteRepository estudiantes, TransicionesPedido transiciones,
-			PasarelaPago pasarela, CafeteriaRepository cafeterias, EntityManager em) {
+			PasarelaPago pasarela, CafeteriaRepository cafeterias, EmisorRecibos emisor,
+			CobroMercadoPagoService mercadoPago, PagosPropiedades config, EntityManager em) {
 		this.pedidos = pedidos;
 		this.transiciones = transiciones;
 		this.pasarela = pasarela;
@@ -70,6 +73,9 @@ public class PedidoService {
 		this.stock = stock;
 		this.estudiantes = estudiantes;
 		this.cafeterias = cafeterias;
+		this.emisor = emisor;
+		this.mercadoPago = mercadoPago;
+		this.config = config;
 		this.em = em;
 	}
 
@@ -115,6 +121,10 @@ public class PedidoService {
 	 * {@code DataIntegrityViolationException} (409 STOCK_INSUFICIENTE) y se revierte todo.
 	 * Un rechazo de la pasarela no revierte: el pago queda FALLIDO y el reintento actualiza esa fila,
 	 * con la fecha del intento nuevo.
+	 * <p>
+	 * Con Mercado Pago ({@code cafetin.pagos.pasarela=mercadopago}) no se cobra aquí: el pago queda
+	 * PENDIENTE con la {@code urlPago} de Checkout Pro y se confirma después ({@link CobroMercadoPagoService}).
+	 * El método que manda la app es provisional: al confirmar se guarda el que informa Mercado Pago.
 	 */
 	@Transactional(noRollbackFor = PagoRechazado.class)
 	public PedidoResponse pagar(Integer idEstudiante, Integer idPedido, MetodoPago metodo) {
@@ -136,12 +146,21 @@ public class PedidoService {
 			pago.setMetodoPago(metodo);
 			pago.setEstado(EstadoPago.PENDIENTE);
 			pago.setReferencia(null);
+			pago.setUrlPago(null);
+			pago.setMpPreferenciaId(null);
 		}
 		boolean reintento = pago.getId() != null;
 		pago = pagos.saveAndFlush(pago);
 		if (reintento) {
 			pagos.fecharAhora(pago.getId());
 			em.refresh(pago);
+		}
+
+		if (config.conMercadoPago()) {
+			String nombre = cafeterias.findById(pedido.getIdCafeteria()).map(Cafeteria::getNombre).orElse("Cafetín");
+			mercadoPago.iniciar(pedido, pago, nombre); // sin cuenta conectada: 409 y se revierte todo
+			pagos.saveAndFlush(pago);
+			return aRespuesta(pedido);
 		}
 
 		ResultadoCobro cobro = pasarela.cobrar(pedido.getCodigoPedido(), pago.getMonto(), metodo);
@@ -154,7 +173,7 @@ public class PedidoService {
 		pago.setReferencia(cobro.referencia());
 		pago.setEstado(EstadoPago.PAGADO);
 		pagos.saveAndFlush(pago);
-		recibos.saveAndFlush(new Recibo(pago, nuevoCodigoRecibo(pedido)));
+		emisor.emitir(pago, pedido);
 		return aRespuesta(pedido);
 	}
 
@@ -166,18 +185,6 @@ public class PedidoService {
 		boolean pagado = pagos.findByPedidoId(idPedido).map(p -> p.getEstado() == EstadoPago.PAGADO).orElse(false);
 		transiciones.aplicar(pedido, EstadoPedido.CANCELADO, pagado);
 		return aRespuesta(pedido);
-	}
-
-	/** {@code DR-<nº del pedido>-<4 dígitos>}; se reintenta si el código ya existe (UNIQUE). */
-	private String nuevoCodigoRecibo(Pedido pedido) {
-		String numero = pedido.getCodigoPedido().substring("PED-".length());
-		for (int intento = 0; intento < 10; intento++) {
-			String codigo = "DR-%s-%04d".formatted(numero, azar.nextInt(10_000));
-			if (!recibos.existsByCodigoVerificacion(codigo)) {
-				return codigo;
-			}
-		}
-		throw new IllegalStateException("No se pudo generar un código de recibo único para " + pedido.getCodigoPedido());
 	}
 
 	@Transactional(readOnly = true)
@@ -215,6 +222,11 @@ public class PedidoService {
 				.orElseThrow(() -> new ApiException.NoEncontrado("No existe el pedido " + idPedido));
 	}
 
+	/** La URL de Checkout Pro solo sirve mientras el pago no se confirmó. */
+	private static boolean porPagar(Pago pago) {
+		return pago.getEstado() == EstadoPago.PENDIENTE || pago.getEstado() == EstadoPago.FALLIDO;
+	}
+
 	PedidoResponse aRespuesta(Pedido p) {
 		List<LineaPedidoResponse> items = p.getDetalles().stream()
 				.map(d -> new LineaPedidoResponse(d.getProducto().getId(), d.getProducto().getNombre(),
@@ -223,7 +235,7 @@ public class PedidoService {
 		Pago pago = pagos.findByPedidoId(p.getId()).orElse(null);
 		PagoResponse pagoResp = pago == null ? null
 				: new PagoResponse(pago.getMonto(), pago.getMetodoPago(), pago.getEstado(), pago.getFecha(),
-						pago.getReferencia());
+						pago.getReferencia(), porPagar(pago) ? pago.getUrlPago() : null);
 		ReciboResponse reciboResp = pago == null ? null
 				: recibos.findByPagoId(pago.getId())
 						.map(r -> new ReciboResponse(r.getCodigoVerificacion(), r.getFechaEmision(), r.isVerificado()))

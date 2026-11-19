@@ -57,7 +57,9 @@ public final class PedidosDto {
 	 * Pago del pedido (RF-06). EFECTIVO no se acepta en la v1 (decisión del 02/11/2026): la app solo
 	 * ofrece YAPE, PLIN y TARJETA, todos por la pasarela simulada.
 	 */
-	@Schema(description = "Método de pago (RF-06). En la v1 solo YAPE, PLIN o TARJETA")
+	@Schema(description = """
+			Método de pago (RF-06). En la v1 solo YAPE, PLIN o TARJETA. Con Mercado Pago es provisional: el
+			estudiante elige el medio en Checkout Pro y al confirmar se guarda el que informa Mercado Pago.""")
 	public record PagarRequest(
 			@NotNull @Schema(allowableValues = { "YAPE", "PLIN", "TARJETA" }, example = "YAPE") MetodoPago metodoPago) {
 
@@ -65,7 +67,7 @@ public final class PedidosDto {
 		@Schema(hidden = true)
 		@AssertTrue(message = "EFECTIVO no está disponible: usa YAPE, PLIN o TARJETA")
 		public boolean isMetodoPermitido() {
-			return metodoPago != MetodoPago.EFECTIVO;
+			return metodoPago != MetodoPago.EFECTIVO && metodoPago != MetodoPago.OTRO;
 		}
 	}
 
@@ -101,7 +103,11 @@ public final class PedidosDto {
 			MetodoPago metodoPago,
 			EstadoPago estado,
 			LocalDateTime fecha,
-			@Schema(description = "Código de operación de la pasarela", example = "PL-220931") String referencia) {
+			@Schema(description = "Código de operación de la pasarela", example = "PL-220931") String referencia,
+			@Schema(description = """
+					Página de Checkout Pro donde el estudiante paga (pasarela Mercado Pago). Nula con la pasarela
+					simulada o cuando el pago ya se confirmó.""", example = "https://www.mercadopago.com.pe/checkout/v1/redirect?pref_id=…")
+			String urlPago) {
 	}
 
 	@Schema(description = "Recibo digital (RF-07): el estudiante muestra el código al recoger")
