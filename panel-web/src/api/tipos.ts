@@ -55,3 +55,13 @@ export type Alerta = Required<Omit<Esquemas['AlertaResponse'], 'proveedor' | 'te
   proveedor: string | null
   telefonoProveedor: string | null
 }
+
+// Cobros (RF-06): la cuenta de Mercado Pago del cafetín. `idUsuarioMp` y `conectadoEn` son nulos sin conexión.
+export type EstadoCobros = Required<Omit<Esquemas['EstadoConexionResponse'], 'idUsuarioMp' | 'conectadoEn'>> & {
+  idUsuarioMp: number | null
+  conectadoEn: string | null
+}
+// El contrato no publica la respuesta 200 de /conectar (springdoc la omite si el método declara @ApiResponse).
+export interface UrlAutorizacion {
+  urlAutorizacion: string
+}

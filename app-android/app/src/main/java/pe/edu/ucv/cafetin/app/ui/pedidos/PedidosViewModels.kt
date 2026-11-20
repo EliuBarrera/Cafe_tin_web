@@ -273,8 +273,19 @@ data class PagoEstado(
     val error: String? = null,
     /** El pago quedó PAGADO: la pantalla muestra el recibo. */
     val pagado: Boolean = false,
+    /** Página de Checkout Pro que la pantalla debe abrir en el navegador; se limpia con [PagoViewModel.urlAbierta]. */
+    val abrirUrl: String? = null,
+    /** El estudiante está pagando en Mercado Pago: al volver a la app se verifica el pago. */
+    val enMercadoPago: Boolean = false,
+    val verificando: Boolean = false,
+    val aviso: String? = null,
 )
 
+/**
+ * Pago (RF-06). Con la pasarela simulada [pagar] cobra al instante. Con Mercado Pago la API deja el pago
+ * PENDIENTE y devuelve `urlPago`: la pantalla la abre y, al volver (enlace `cafetin://pago/{id}` o "atrás"),
+ * llama a [verificar] hasta que el pago se confirma, se rechaza o se reembolsa.
+ */
 class PagoViewModel(private val pedidos: Pedidos, private val idPedido: Int) : ViewModel() {
 
     private val _estado = MutableStateFlow(PagoEstado())
@@ -289,7 +300,10 @@ class PagoViewModel(private val pedidos: Pedidos, private val idPedido: Int) : V
         viewModelScope.launch {
             try {
                 val pedido = pedidos.pedido(idPedido)
-                _estado.update { it.copy(cargando = false, pedido = pedido, pagado = pedido.pagado) }
+                // Un pago PENDIENTE que sobrevive es uno de Mercado Pago a medias (p. ej. la app se cerró): se verifica.
+                val aMedias = !pedido.pagado && pedido.pago?.estado == "PENDIENTE"
+                _estado.update { it.copy(cargando = false, pedido = pedido, pagado = pedido.pagado, enMercadoPago = aMedias) }
+                if (aMedias) verificar(silencioso = true)
             } catch (e: ErrorApi) {
                 _estado.update { it.copy(cargando = false, error = e.message) }
             }
@@ -300,14 +314,19 @@ class PagoViewModel(private val pedidos: Pedidos, private val idPedido: Int) : V
 
     fun pagar() {
         if (_estado.value.pagando) return
-        _estado.update { it.copy(pagando = true, error = null) }
+        _estado.update { it.copy(pagando = true, error = null, aviso = null) }
         viewModelScope.launch {
             try {
                 val pedido = pedidos.pagar(idPedido, _estado.value.metodo)
-                _estado.update { it.copy(pagando = false, pedido = pedido, pagado = pedido.pagado) }
+                val url = pedido.pago?.urlPago
+                if (!pedido.pagado && pedido.pago?.estado == "PENDIENTE" && url != null) {
+                    _estado.update { it.copy(pagando = false, pedido = pedido, abrirUrl = url, enMercadoPago = true) }
+                } else {
+                    _estado.update { it.copy(pagando = false, pedido = pedido, pagado = pedido.pagado) }
+                }
             } catch (e: ErrorApi) {
                 val mensaje = when (e.codigo) {
-                    "PAGO_RECHAZADO" -> "El pago fue rechazado. Tu pedido sigue guardado: intenta de nuevo o usa otro método."
+                    "PAGO_RECHAZADO" -> RECHAZADO
                     "STOCK_INSUFICIENTE" -> "Otro estudiante compró las últimas unidades. Cancela este pedido y arma uno nuevo."
                     else -> e.message
                 }
@@ -318,8 +337,48 @@ class PagoViewModel(private val pedidos: Pedidos, private val idPedido: Int) : V
         }
     }
 
+    /** La pantalla ya lanzó el navegador con [PagoEstado.abrirUrl]. */
+    fun urlAbierta() = _estado.update { it.copy(abrirUrl = null) }
+
+    /** "Volver a abrir Mercado Pago": reutiliza el enlace vigente o pide uno nuevo. */
+    fun reabrir() {
+        val url = _estado.value.pedido?.pago?.urlPago
+        if (url != null) _estado.update { it.copy(abrirUrl = url, aviso = null) } else pagar()
+    }
+
+    /**
+     * Pregunta a la API (que consulta a Mercado Pago) cómo quedó el pago. [silencioso]: la llamada automática
+     * al volver a la app o cada pocos segundos; no muestra "aún no llega" ni errores de red.
+     */
+    fun verificar(silencioso: Boolean = false) {
+        if (_estado.value.verificando || !_estado.value.enMercadoPago) return
+        _estado.update { it.copy(verificando = true, error = if (silencioso) it.error else null) }
+        viewModelScope.launch {
+            try {
+                val p = pedidos.verificarPago(idPedido)
+                _estado.update {
+                    val base = it.copy(verificando = false, pedido = p)
+                    when {
+                        p.pagado -> base.copy(pagado = true, enMercadoPago = false, aviso = null)
+                        p.pago?.estado == "REEMBOLSADO" || p.estado == "CANCELADO" -> base.copy(enMercadoPago = false, aviso = null, error = REEMBOLSADO)
+                        p.pago?.estado == "FALLIDO" -> base.copy(enMercadoPago = false, aviso = null, error = RECHAZADO)
+                        silencioso -> base
+                        else -> base.copy(aviso = "Mercado Pago aún no confirma tu pago. Si ya pagaste, espera unos segundos.")
+                    }
+                }
+            } catch (e: ErrorApi) {
+                _estado.update { it.copy(verificando = false, error = if (silencioso) it.error else e.message) }
+            }
+        }
+    }
+
     private suspend fun recargar() {
         runCatching { pedidos.pedido(idPedido) }.onSuccess { p -> _estado.update { it.copy(pedido = p, pagado = p.pagado) } }
+    }
+
+    private companion object {
+        const val RECHAZADO = "El pago fue rechazado. Tu pedido sigue guardado: intenta de nuevo o usa otro método."
+        const val REEMBOLSADO = "Otro estudiante compró las últimas unidades mientras pagabas. Cancelamos el pedido y te devolvimos el dinero."
     }
 }
 

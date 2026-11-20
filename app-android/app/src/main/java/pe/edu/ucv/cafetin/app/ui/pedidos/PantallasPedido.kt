@@ -1,5 +1,7 @@
 package pe.edu.ucv.cafetin.app.ui.pedidos
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -52,7 +55,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import pe.edu.ucv.cafetin.app.datos.Notificacion
 import pe.edu.ucv.cafetin.app.datos.PedidoResponse
@@ -73,6 +79,31 @@ fun PantallaPago(vm: PagoViewModel, alPagar: (Int) -> Unit) {
     LaunchedEffect(estado.pagado) {
         if (estado.pagado) estado.pedido?.let { alPagar(it.id) }
     }
+    // Mercado Pago: Checkout Pro se abre en el navegador (sin dependencias nuevas).
+    val contexto = LocalContext.current
+    LaunchedEffect(estado.abrirUrl) {
+        estado.abrirUrl?.let { url ->
+            val abierto = runCatching { contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.isSuccess
+            vm.urlAbierta()
+            if (!abierto) vm.verificar()
+        }
+    }
+    // Al volver a la app (por el enlace cafetin://pago/{id} o con "atrás") se verifica, y luego cada pocos
+    // segundos mientras la pantalla esté visible. Primero se espera a que la app pase a segundo plano.
+    val ciclo = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(estado.enMercadoPago) {
+        if (estado.enMercadoPago) {
+            var primeraVez = true
+            ciclo.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                if (!primeraVez) vm.verificar(silencioso = true)
+                primeraVez = false
+                while (true) {
+                    delay(INTERVALO_REFRESCO_MS)
+                    vm.verificar(silencioso = true)
+                }
+            }
+        }
+    }
     val pedido = estado.pedido
     when {
         estado.cargando -> Esqueleto(3, 120.dp)
@@ -84,7 +115,7 @@ fun PantallaPago(vm: PagoViewModel, alPagar: (Int) -> Unit) {
                     Text("${pedido.codigoPedido} · recojo a las ${pedido.horaRecojo ?: "—"}${pedido.cafeteria?.let { " en ${it.nombre}" }.orEmpty()}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 item { DetalleLineas(pedido) }
-                item {
+                if (estado.enMercadoPago) item { EsperandoMercadoPago(estado.aviso) } else item {
                     Text("¿Cómo pagas?", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     // Pago dentro de la app con medios locales: reduce el "dolor de pagar" (Prelec y Loewenstein, 1998).
@@ -95,14 +126,45 @@ fun PantallaPago(vm: PagoViewModel, alPagar: (Int) -> Unit) {
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Pago de prueba: no se te cobra de verdad ni se guardan datos de tarjeta.",
+                        "No guardamos datos de tarjeta: el cobro lo hace la pasarela de pago.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 item { MensajeError(estado.error) }
             }
-            BarraAccion { BotonPrincipal("Pagar ${soles(pedido.total)}", estado.pagando, vm::pagar) }
+            BarraAccion {
+                if (estado.enMercadoPago) Column {
+                    BotonPrincipal("Ya pagué: revisar", estado.verificando) { vm.verificar() }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = vm::reabrir, enabled = !estado.pagando, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                        Text("Volver a abrir Mercado Pago")
+                    }
+                } else {
+                    BotonPrincipal("Pagar ${soles(pedido.total)}", estado.pagando, vm::pagar)
+                }
+            }
+        }
+    }
+}
+
+/** Mientras el estudiante paga en Checkout Pro. [aviso]: "aún no se confirma" tras pulsar "Ya pagué". */
+@Composable
+private fun EsperandoMercadoPago(aviso: String?) {
+    Card(colors = CardDefaults.cardColors(containerColor = fondoCrema()), elevation = CardDefaults.cardElevation(0.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(12.dp))
+                Text("Completa el pago en Mercado Pago", style = MaterialTheme.typography.titleMedium)
+            }
+            Text(
+                "Cuando termines, vuelve a la app: confirmamos tu pago y te mostramos el recibo.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (aviso != null) {
+                Text(aviso, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            }
         }
     }
 }

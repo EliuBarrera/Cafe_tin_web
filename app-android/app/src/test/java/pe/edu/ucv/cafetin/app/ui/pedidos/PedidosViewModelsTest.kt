@@ -126,6 +126,86 @@ class PedidosViewModelsTest {
     }
 
     @Test
+    fun conMercadoPagoAbreElCheckoutYConfirmaAlVolver() {
+        api.urlCheckout = "https://mp.test/checkout?pref_id=1"
+        val vm = PagoViewModel(api, 30)
+
+        vm.pagar()
+        assertEquals("https://mp.test/checkout?pref_id=1", vm.estado.value.abrirUrl)
+        assertTrue(vm.estado.value.enMercadoPago)
+        assertFalse(vm.estado.value.pagado)
+
+        vm.urlAbierta()
+        assertNull(vm.estado.value.abrirUrl)
+
+        api.verificado = PedidoResponse(30, "PED-430", "PENDIENTE", total = 5.0, pago = Pago(5.0, "TARJETA", "PAGADO"), recibo = Recibo("DR-0430-1234"))
+        vm.verificar(silencioso = true)
+
+        assertTrue(vm.estado.value.pagado)
+        assertFalse(vm.estado.value.enMercadoPago)
+    }
+
+    @Test
+    fun pagoAunNoConfirmadoSoloAvisaSiElEstudianteLoPide() {
+        api.urlCheckout = "https://mp.test/checkout"
+        val vm = PagoViewModel(api, 30)
+        vm.pagar()
+
+        vm.verificar(silencioso = true)
+        assertNull(vm.estado.value.aviso)
+        assertTrue(vm.estado.value.enMercadoPago)
+
+        vm.verificar()
+        assertTrue(vm.estado.value.aviso!!.startsWith("Mercado Pago aún no confirma"))
+        assertFalse(vm.estado.value.pagado)
+    }
+
+    @Test
+    fun pagoRechazadoEnMercadoPagoPermiteReintentar() {
+        api.urlCheckout = "https://mp.test/checkout"
+        val vm = PagoViewModel(api, 30)
+        vm.pagar()
+
+        api.verificado = PedidoResponse(30, "PED-430", "PENDIENTE", total = 5.0, pago = Pago(5.0, "TARJETA", "FALLIDO"))
+        vm.verificar(silencioso = true)
+
+        assertFalse(vm.estado.value.enMercadoPago)
+        assertTrue(vm.estado.value.error!!.startsWith("El pago fue rechazado"))
+    }
+
+    @Test
+    fun sinStockAlConfirmarExplicaElReembolso() {
+        api.urlCheckout = "https://mp.test/checkout"
+        val vm = PagoViewModel(api, 30)
+        vm.pagar()
+
+        api.verificado = PedidoResponse(30, "PED-430", "CANCELADO", total = 5.0, pago = Pago(5.0, "TARJETA", "REEMBOLSADO"))
+        vm.verificar(silencioso = true)
+
+        assertFalse(vm.estado.value.pagado)
+        assertTrue(vm.estado.value.error!!.contains("te devolvimos el dinero"))
+    }
+
+    @Test
+    fun pagoAMediasSeVerificaAlAbrirLaPantalla() {
+        api.leido = PedidoResponse(30, "PED-430", "PENDIENTE", total = 5.0, pago = Pago(5.0, "TARJETA", "PENDIENTE", urlPago = "https://mp.test/checkout"))
+        api.verificado = PedidoResponse(30, "PED-430", "PENDIENTE", total = 5.0, pago = Pago(5.0, "TARJETA", "PAGADO"), recibo = Recibo("DR-0430-1234"))
+
+        val vm = PagoViewModel(api, 30)
+
+        assertEquals(1, api.verificaciones)
+        assertTrue(vm.estado.value.pagado)
+    }
+
+    @Test
+    fun conLaPasarelaSimuladaNoSeVerifica() {
+        val vm = PagoViewModel(api, 30)
+        vm.verificar()
+        assertEquals(0, api.verificaciones)
+        assertNull(vm.estado.value.abrirUrl)
+    }
+
+    @Test
     fun cancelarUnPedidoPagadoMuestraQueYaNoSePuede() {
         val vm = PedidoViewModel(api, 30)
         api.falla = ErrorApi(409, "TRANSICION_INVALIDA", "No se puede")
@@ -309,15 +389,30 @@ class PedidosFalsos : Pedidos {
         return sinPagar
     }
 
+    /** Con Mercado Pago `pagar` deja el pago PENDIENTE con `urlPago`; null = pasarela simulada. */
+    var urlCheckout: String? = null
+    /** Lo que responde `verificarPago` (lo que Mercado Pago dice del cobro). */
+    var verificado: PedidoResponse? = null
+    var verificaciones = 0
+    /** Respuesta de `pedido(id)`; por defecto el pedido sin pagar. */
+    var leido: PedidoResponse? = null
+
     override suspend fun pagar(idPedido: Int, metodoPago: String): PedidoResponse {
         fallarSiToca()
         metodoPagado = metodoPago
+        urlCheckout?.let { return sinPagar.copy(pago = Pago(5.0, metodoPago, "PENDIENTE", urlPago = it)) }
         return sinPagar.copy(pago = Pago(5.0, metodoPago, "PAGADO"), recibo = Recibo("DR-0430-1234"))
+    }
+
+    override suspend fun verificarPago(idPedido: Int): PedidoResponse {
+        verificaciones++
+        fallarSiToca()
+        return verificado ?: sinPagar.copy(pago = Pago(5.0, "TARJETA", "PENDIENTE", urlPago = urlCheckout))
     }
 
     override suspend fun cancelar(idPedido: Int) = sinPagar.copy(estado = "CANCELADO").also { fallarSiToca() }
 
-    override suspend fun pedido(idPedido: Int) = sinPagar.copy(items = items, cafeteria = cafeteriaDelPedido)
+    override suspend fun pedido(idPedido: Int) = leido ?: sinPagar.copy(items = items, cafeteria = cafeteriaDelPedido)
 
     override suspend fun historial(pagina: Int, tamano: Int): PaginaPedidos {
         paginasPedidas += pagina

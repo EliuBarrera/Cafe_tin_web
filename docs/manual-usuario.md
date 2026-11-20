@@ -96,6 +96,16 @@ Solo cuentan los pagos confirmados.
   **Activar** lo deshace.
 - Los trabajadores no se editan: si un dato está mal, desactívalo y registra uno nuevo.
 
+### Cobros (RF-06)
+
+Solo cuando la API cobra con Mercado Pago (con la pasarela simulada la página lo indica y no hay
+nada que hacer).
+
+- **Conectar Mercado Pago**: lleva a Mercado Pago para autorizar al cafetín. Al volver, el panel
+  avisa si quedó conectada. Desde ese momento el dinero de cada venta llega a esa cuenta.
+- Mientras no esté conectada, los estudiantes ven el catálogo pero **no pueden pagar**.
+- **Desconectar** (pide confirmar): los estudiantes dejan de poder pagar hasta que conectes otra vez.
+
 ## Estudiante (app Android)
 
 > Pendiente: la app todavía no existe. Este es el flujo que la API ya permite.
@@ -103,10 +113,13 @@ Solo cuentan los pagos confirmados.
 1. **Registrarse** con nombre, apellidos, correo, código de estudiante, carrera, ciclo y contraseña.
 2. Ver el **catálogo**: los productos agotados aparecen marcados y no se pueden pedir.
 3. Armar el **pedido**, elegir la **hora de recojo** y pagar con **Yape**, **Plin** o **tarjeta**
-   (la pasarela es simulada; no hay pago en efectivo en esta versión). Si el pago se rechaza, el
-   pedido se conserva y se puede reintentar.
+   (no hay pago en efectivo en esta versión). Si el pago se rechaza, el pedido se conserva y se
+   puede reintentar. Con **Mercado Pago**, *Pagar* abre su página en el navegador; al terminar se
+   vuelve a la app, que confirma el pago sola (o con *Ya pagué: revisar*). Si mientras pagabas otro
+   estudiante compró las últimas unidades, el pedido se cancela y el dinero se devuelve.
 4. Tras pagar llega el **recibo** con su código `DR-…`: es lo que se muestra al recoger.
 5. Avisos en el celular cuando el pedido se **confirma**, está **listo** y se **entrega**. Si el
    aviso no llega, la app los muestra igual al abrirse.
-6. Un pedido **sin pagar** se puede cancelar; uno pagado, no (no hay reembolsos en esta versión).
+6. Un pedido **sin pagar** se puede cancelar; uno pagado, no (no hay reembolsos en esta versión,
+   salvo el caso de Mercado Pago sin stock del punto 3).
 7. **Historial** con todos sus pedidos.
