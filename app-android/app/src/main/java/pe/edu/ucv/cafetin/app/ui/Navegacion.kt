@@ -34,6 +34,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import pe.edu.ucv.cafetin.app.R
 import pe.edu.ucv.cafetin.app.datos.AlmacenSesion
@@ -88,7 +90,13 @@ private val PESTANAS = listOf(
  * rechaza (token vencido o cuenta desactivada), al login. Lo mismo si la rechaza después, en cualquier pantalla.
  */
 @Composable
-fun AppCafetin(cuentas: Cuentas, pedidos: Pedidos, almacen: AlmacenSesion? = null) {
+fun AppCafetin(
+    cuentas: Cuentas,
+    pedidos: Pedidos,
+    almacen: AlmacenSesion? = null,
+    enlacePago: StateFlow<Int?> = MutableStateFlow(null),
+    alAtenderEnlace: () -> Unit = {},
+) {
     var revisando by remember { mutableStateOf(true) }
     var sesion by remember { mutableStateOf<Sesion?>(null) }
     LaunchedEffect(Unit) {
@@ -117,6 +125,18 @@ fun AppCafetin(cuentas: Cuentas, pedidos: Pedidos, almacen: AlmacenSesion? = nul
             cuentas.cerrarSesion()
             if (sesion != null) alSalir()
         }
+    }
+
+    // Vuelta de Mercado Pago (cafetin://pago/{id}). Si ya está en el pago de ese pedido, la propia pantalla
+    // verifica al volver a primer plano; si no, se abre. Sin sesión espera al login.
+    val pendiente by enlacePago.collectAsState()
+    LaunchedEffect(pendiente, sesion) {
+        val id = pendiente ?: return@LaunchedEffect
+        if (sesion == null) return@LaunchedEffect
+        val actual = nav.currentBackStackEntry
+        val yaAbierto = actual?.destination?.route == Rutas.PAGO && actual.arguments?.getInt("id") == id
+        if (!yaAbierto) nav.navigate(Rutas.pago(id))
+        alAtenderEnlace()
     }
 
     val entrada by nav.currentBackStackEntryAsState()

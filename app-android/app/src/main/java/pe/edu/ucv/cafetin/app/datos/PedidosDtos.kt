@@ -35,7 +35,7 @@ data class CrearPedidoRequest(
     val observacion: String? = null,
 )
 
-/** RF-06. Solo YAPE, PLIN o TARJETA en la v1. */
+/** RF-06. Solo YAPE, PLIN o TARJETA en la v1 (con Mercado Pago es provisional: se guarda el que informa MP). */
 @Serializable
 data class PagarRequest(val metodoPago: String)
 
@@ -55,6 +55,8 @@ data class Pago(
     val estado: String,
     val fecha: String? = null,
     val referencia: String? = null,
+    /** Página de Checkout Pro (pasarela Mercado Pago) mientras el pago está PENDIENTE; nula con la simulada. */
+    val urlPago: String? = null,
 )
 
 /** RF-07: el estudiante muestra [codigoVerificacion] al recoger. */

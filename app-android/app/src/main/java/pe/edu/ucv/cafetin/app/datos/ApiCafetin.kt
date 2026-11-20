@@ -43,6 +43,13 @@ interface ApiCafetin {
     @POST("api/pedidos/{id}/pago")
     suspend fun pagar(@Path("id") id: Int, @Body solicitud: PagarRequest): PedidoResponse
 
+    /**
+     * Al volver de Checkout Pro: consulta el pago a Mercado Pago y, si se aprobó, lo confirma. Idempotente.
+     * Con la pasarela simulada solo devuelve el pedido.
+     */
+    @POST("api/pedidos/{id}/pago/verificar")
+    suspend fun verificarPago(@Path("id") id: Int): PedidoResponse
+
     /** Solo un pedido PENDIENTE sin pagar; si no, 409 TRANSICION_INVALIDA. */
     @POST("api/pedidos/{id}/cancelar")
     suspend fun cancelar(@Path("id") id: Int): PedidoResponse

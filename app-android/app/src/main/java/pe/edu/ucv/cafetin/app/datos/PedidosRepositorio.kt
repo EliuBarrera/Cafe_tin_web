@@ -6,6 +6,7 @@ interface Pedidos {
     suspend fun catalogo(idCafeteria: Int): List<ProductoCatalogo>
     suspend fun crear(solicitud: CrearPedidoRequest): PedidoResponse
     suspend fun pagar(idPedido: Int, metodoPago: String): PedidoResponse
+    suspend fun verificarPago(idPedido: Int): PedidoResponse
     suspend fun cancelar(idPedido: Int): PedidoResponse
     suspend fun pedido(idPedido: Int): PedidoResponse
     suspend fun historial(pagina: Int, tamano: Int = TAMANO_PAGINA): PaginaPedidos
@@ -28,6 +29,8 @@ class PedidosRepositorio(private val api: ApiCafetin) : Pedidos {
 
     override suspend fun pagar(idPedido: Int, metodoPago: String) =
         ClienteApi.llamar { api.pagar(idPedido, PagarRequest(metodoPago)) }
+
+    override suspend fun verificarPago(idPedido: Int) = ClienteApi.llamar { api.verificarPago(idPedido) }
 
     override suspend fun cancelar(idPedido: Int) = ClienteApi.llamar { api.cancelar(idPedido) }
 
