@@ -60,6 +60,18 @@ public class Pago {
 	@Column(length = 60)
 	private String referencia;
 
+	/** Preferencia de Checkout Pro (V13); nula con la pasarela simulada. */
+	@Column(name = "mp_preferencia_id", length = 80)
+	private String mpPreferenciaId;
+
+	/** Id del pago en Mercado Pago (único), cuando Mercado Pago lo informa. */
+	@Column(name = "mp_pago_id", unique = true)
+	private Long mpPagoId;
+
+	/** Página de Checkout Pro donde el estudiante paga. */
+	@Column(name = "url_pago", length = 500)
+	private String urlPago;
+
 	protected Pago() {
 	}
 
@@ -86,5 +98,14 @@ public class Pago {
 
 	public String getReferencia() { return referencia; }
 	public void setReferencia(String referencia) { this.referencia = referencia; }
+
+	public String getMpPreferenciaId() { return mpPreferenciaId; }
+	public void setMpPreferenciaId(String mpPreferenciaId) { this.mpPreferenciaId = mpPreferenciaId; }
+
+	public Long getMpPagoId() { return mpPagoId; }
+	public void setMpPagoId(Long mpPagoId) { this.mpPagoId = mpPagoId; }
+
+	public String getUrlPago() { return urlPago; }
+	public void setUrlPago(String urlPago) { this.urlPago = urlPago; }
 
 }

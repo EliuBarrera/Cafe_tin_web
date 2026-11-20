@@ -22,7 +22,7 @@ public class PasarelaSimulada implements PasarelaPago {
 			case YAPE -> "YP";
 			case PLIN -> "PL";
 			case TARJETA -> "TJ";
-			case EFECTIVO -> throw new IllegalArgumentException("EFECTIVO no pasa por la pasarela");
+			case EFECTIVO, OTRO -> throw new IllegalArgumentException(metodo + " no pasa por la pasarela simulada");
 		};
 		return ResultadoCobro.aprobado("%s-%06d".formatted(prefijo, azar.nextInt(1_000_000)));
 	}

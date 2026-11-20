@@ -305,6 +305,120 @@ paths:
       summary: Listar cafetines
       tags:
       - Pedidos
+  /api/cafeterias/mia/mercadopago:
+    delete:
+      description: "DUENO · RF-06. Borra los tokens del cafetín: deja de aceptar pagos\
+        \ hasta que vuelva a conectar."
+      operationId: desconectar
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Desconectar Mercado Pago
+      tags:
+      - Cobros
+    get:
+      description: DUENO · RF-06. Si el cafetín conectó su cuenta y con qué pasarela
+        cobra la API. Nunca devuelve tokens.
+      operationId: estado
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstadoConexionResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Estado de la cuenta de Mercado Pago
+      tags:
+      - Cobros
+  /api/cafeterias/mia/mercadopago/conectar:
+    post:
+      description: |-
+        DUENO · RF-06. Devuelve la página de Mercado Pago donde el dueño autoriza al cafetín a cobrar.
+        El panel navega a esa URL; Mercado Pago vuelve a /api/mercadopago/oauth/retorno y de ahí al
+        panel con ?mercadopago=conectado o ?mercadopago=error. El enlace vale 10 minutos.
+      operationId: conectar
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: La API cobra con la pasarela simulada (REGLA_NEGOCIO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Conectar Mercado Pago
+      tags:
+      - Cobros
   /api/catalogo:
     get:
       description: |-
@@ -951,6 +1065,170 @@ paths:
       summary: Recargar stock
       tags:
       - Inventario
+  /api/mercadopago/oauth/retorno:
+    get:
+      description: |-
+        Público. Mercado Pago redirige aquí al dueño tras autorizar. Valida el state, guarda los tokens
+        cifrados y redirige (302) al panel con ?mercadopago=conectado o ?mercadopago=error.
+      operationId: retornoOauth
+      parameters:
+      - in: query
+        name: code
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: state
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: error
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Retorno del OAuth de Mercado Pago
+      tags:
+      - Cobros
+  /api/mercadopago/retorno-pago:
+    get:
+      description: |-
+        Público. Checkout Pro vuelve aquí al terminar (aprobado, rechazado o pendiente) y se redirige (302)
+        a la app (cafetin://pago/{pedido}), que confirma con POST /api/pedidos/{id}/pago/verificar.
+      operationId: retornoPago
+      parameters:
+      - in: query
+        name: pedido
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Vuelta del checkout
+      tags:
+      - Cobros
+  /api/mercadopago/webhook:
+    post:
+      description: |-
+        Público, con firma x-signature (MP_WEBHOOK_SECRET). Solo atiende pagos: consulta el pago a Mercado
+        Pago y lo confirma (idempotente). Firma inválida → 401.
+      operationId: webhook
+      parameters:
+      - in: query
+        name: cafeteria
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - in: query
+        name: data.id
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: type
+        required: false
+        schema:
+          type: string
+      - in: header
+        name: x-signature
+        required: false
+        schema:
+          type: string
+      - in: header
+        name: x-request-id
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Notificación de Mercado Pago
+      tags:
+      - Cobros
   /api/pedidos:
     post:
       description: |-
@@ -1168,9 +1446,11 @@ paths:
   /api/pedidos/{id}/pago:
     post:
       description: |-
-        ESTUDIANTE · RF-06, RF-07, RF-16, RF-20. Cobra con la pasarela simulada, pasa el pago a PAGADO
-        (la base descuenta el stock) y genera el recibo. Si la pasarela rechaza, el pedido se conserva y
-        se puede reintentar con el mismo u otro método. Debe responder en menos de 5 s (RNF-02).
+        ESTUDIANTE · RF-06, RF-07, RF-16, RF-20. Con la pasarela simulada cobra al instante, pasa el pago a
+        PAGADO (la base descuenta el stock) y genera el recibo. Si la pasarela rechaza, el pedido se conserva
+        y se puede reintentar con el mismo u otro método. Debe responder en menos de 5 s (RNF-02).
+        Con Mercado Pago deja el pago PENDIENTE y devuelve pago.urlPago (Checkout Pro): la app la abre y, al
+        volver, llama a POST /api/pedidos/{id}/pago/verificar. Cada llamada genera un enlace nuevo.
       operationId: pagar
       parameters:
       - in: path
@@ -1223,7 +1503,7 @@ paths:
                 $ref: "#/components/schemas/ErrorRespuesta"
           description: |-
             Otro estudiante compró las últimas unidades (STOCK_INSUFICIENTE) o el pedido ya está pagado o
-            cancelado (REGLA_NEGOCIO)
+            cancelado (REGLA_NEGOCIO), o el cafetín aún no conectó Mercado Pago (REGLA_NEGOCIO)
         "500":
           content:
             application/json:
@@ -1231,6 +1511,61 @@ paths:
                 $ref: "#/components/schemas/ErrorRespuesta"
           description: Error inesperado (ERROR_INTERNO)
       summary: Pagar pedido
+      tags:
+      - Pedidos
+  /api/pedidos/{id}/pago/verificar:
+    post:
+      description: |-
+        ESTUDIANTE (propio) · RF-06, RF-07. La app la llama al volver de Checkout Pro: consulta a Mercado
+        Pago y, si el pago se aprobó, lo confirma (PAGADO, stock descontado, recibo). Es idempotente y
+        equivale al webhook. Si se aprobó pero ya no hay stock, el cobro se reembolsa y el pedido queda
+        CANCELADO con el pago REEMBOLSADO. Con la pasarela simulada solo devuelve el pedido.
+      operationId: verificarPago
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: "Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO)"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Sin token o token inválido (NO_AUTENTICADO)
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: El rol no tiene acceso (ACCESO_DENEGADO)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: No existe o no te pertenece (NO_ENCONTRADO)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRespuesta"
+          description: Error inesperado (ERROR_INTERNO)
+      summary: Verificar pago en Mercado Pago
       tags:
       - Pedidos
   /api/productos:
@@ -2341,6 +2676,28 @@ components:
           type: string
           description: Mensaje en español para mostrar al usuario
           example: Revisa los campos marcados
+    EstadoConexionResponse:
+      type: object
+      description: Cuenta de Mercado Pago del cafetín (nunca incluye tokens)
+      properties:
+        conectado:
+          type: boolean
+          description: Si el cafetín conectó su cuenta de Mercado Pago
+        conectadoEn:
+          type: string
+          format: date-time
+          description: Cuándo se conectó; nulo si no está conectado
+        idUsuarioMp:
+          type: integer
+          format: int64
+          description: Id del usuario vendedor en Mercado Pago; nulo si no está conectado
+          example: 3862056228
+        pasarela:
+          type: string
+          description: Pasarela con la que cobra la API
+          enum:
+          - SIMULADA
+          - MERCADOPAGO
     EstadoRequest:
       type: object
       description: Activar o desactivar sin borrar
@@ -2488,7 +2845,9 @@ components:
             \ STOCK_BAJO o STOCK_AGOTADO"
     PagarRequest:
       type: object
-      description: "Método de pago (RF-06). En la v1 solo YAPE, PLIN o TARJETA"
+      description: |-
+        Método de pago (RF-06). En la v1 solo YAPE, PLIN o TARJETA. Con Mercado Pago es provisional: el
+        estudiante elige el medio en Checkout Pro y al confirmar se guarda el que informa Mercado Pago.
       properties:
         metodoPago:
           type: string
@@ -2570,6 +2929,7 @@ components:
           - PLIN
           - TARJETA
           - EFECTIVO
+          - OTRO
         monto:
           type: number
           example: 10.5
@@ -2577,6 +2937,12 @@ components:
           type: string
           description: Código de operación de la pasarela
           example: PL-220931
+        urlPago:
+          type: string
+          description: |-
+            Página de Checkout Pro donde el estudiante paga (pasarela Mercado Pago). Nula con la pasarela
+            simulada o cuando el pago ya se confirmó.
+          example: https://www.mercadopago.com.pe/checkout/v1/redirect?pref_id=…
     PedidoDespachoResponse:
       type: object
       description: Pedido pagado en el tablero de despacho
@@ -2614,6 +2980,7 @@ components:
           - PLIN
           - TARJETA
           - EFECTIVO
+          - OTRO
         reciboVerificado:
           type: boolean
           description: true cuando el código del recibo ya se verificó (habilita entregar)
@@ -3173,6 +3540,7 @@ components:
           - PLIN
           - TARJETA
           - EFECTIVO
+          - OTRO
         monto:
           type: number
           example: 10.0

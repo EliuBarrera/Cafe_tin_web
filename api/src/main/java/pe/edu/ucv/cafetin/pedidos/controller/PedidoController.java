@@ -21,6 +21,7 @@ import jakarta.validation.constraints.Min;
 import pe.edu.ucv.cafetin.comun.dto.Pagina;
 import pe.edu.ucv.cafetin.comun.error.ErrorRespuesta;
 import pe.edu.ucv.cafetin.cuentas.seguridad.UsuarioActual;
+import pe.edu.ucv.cafetin.mercadopago.service.CobroMercadoPagoService;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.CrearPedidoRequest;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.PagarRequest;
 import pe.edu.ucv.cafetin.pedidos.dto.PedidosDto.PedidoResponse;
@@ -38,10 +39,12 @@ public class PedidoController {
 
 	private final PedidoService servicio;
 	private final UsuarioActual usuario;
+	private final CobroMercadoPagoService mercadoPago;
 
-	public PedidoController(PedidoService servicio, UsuarioActual usuario) {
+	public PedidoController(PedidoService servicio, UsuarioActual usuario, CobroMercadoPagoService mercadoPago) {
 		this.servicio = servicio;
 		this.usuario = usuario;
+		this.mercadoPago = mercadoPago;
 	}
 
 	@PostMapping
@@ -57,17 +60,30 @@ public class PedidoController {
 
 	@PostMapping("/{id}/pago")
 	@Operation(summary = "Pagar pedido", description = """
-			ESTUDIANTE · RF-06, RF-07, RF-16, RF-20. Cobra con la pasarela simulada, pasa el pago a PAGADO
-			(la base descuenta el stock) y genera el recibo. Si la pasarela rechaza, el pedido se conserva y
-			se puede reintentar con el mismo u otro método. Debe responder en menos de 5 s (RNF-02).""")
+			ESTUDIANTE · RF-06, RF-07, RF-16, RF-20. Con la pasarela simulada cobra al instante, pasa el pago a
+			PAGADO (la base descuenta el stock) y genera el recibo. Si la pasarela rechaza, el pedido se conserva
+			y se puede reintentar con el mismo u otro método. Debe responder en menos de 5 s (RNF-02).
+			Con Mercado Pago deja el pago PENDIENTE y devuelve pago.urlPago (Checkout Pro): la app la abre y, al
+			volver, llama a POST /api/pedidos/{id}/pago/verificar. Cada llamada genera un enlace nuevo.""")
 	@ApiResponse(responseCode = "402", description = "La pasarela rechazó el cobro (PAGO_RECHAZADO); se puede reintentar",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	@ApiResponse(responseCode = "409", description = """
 			Otro estudiante compró las últimas unidades (STOCK_INSUFICIENTE) o el pedido ya está pagado o
-			cancelado (REGLA_NEGOCIO)""",
+			cancelado (REGLA_NEGOCIO), o el cafetín aún no conectó Mercado Pago (REGLA_NEGOCIO)""",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public PedidoResponse pagar(@PathVariable Integer id, @Valid @RequestBody PagarRequest solicitud) {
 		return servicio.pagar(usuario.id(), id, solicitud.metodoPago());
+	}
+
+	@PostMapping("/{id}/pago/verificar")
+	@Operation(summary = "Verificar pago en Mercado Pago", description = """
+			ESTUDIANTE (propio) · RF-06, RF-07. La app la llama al volver de Checkout Pro: consulta a Mercado
+			Pago y, si el pago se aprobó, lo confirma (PAGADO, stock descontado, recibo). Es idempotente y
+			equivale al webhook. Si se aprobó pero ya no hay stock, el cobro se reembolsa y el pedido queda
+			CANCELADO con el pago REEMBOLSADO. Con la pasarela simulada solo devuelve el pedido.""")
+	public PedidoResponse verificarPago(@PathVariable Integer id) {
+		mercadoPago.verificar(usuario.id(), id);
+		return servicio.obtener(usuario.id(), id);
 	}
 
 	@PostMapping("/{id}/cancelar")

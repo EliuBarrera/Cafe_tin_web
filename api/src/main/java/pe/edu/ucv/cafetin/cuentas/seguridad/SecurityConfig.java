@@ -67,10 +67,15 @@ public class SecurityConfig {
 						// springdoc los desactiva en el perfil prod.
 						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll()
 
+						// Mercado Pago: retorno del OAuth, vuelta del checkout y webhook (con firma propia).
+						.requestMatchers(HttpMethod.GET, "/api/mercadopago/oauth/retorno", "/api/mercadopago/retorno-pago").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/mercadopago/webhook").permitAll()
+
 						.requestMatchers("/api/pedidos/**").hasRole("ESTUDIANTE")
 						.requestMatchers("/api/despacho/**").hasAnyRole("TRABAJADOR", "DUENO")
 						.requestMatchers("/api/inventario/**", "/api/productos/**", "/api/alertas/**",
-								"/api/reportes/**", "/api/trabajadores/**", "/api/proveedores/**").hasRole("DUENO")
+								"/api/reportes/**", "/api/trabajadores/**", "/api/proveedores/**",
+								"/api/cafeterias/mia/**").hasRole("DUENO")
 
 						.requestMatchers(HttpMethod.GET, "/api/catalogo", "/api/categorias", "/api/cafeterias").authenticated()
 						.requestMatchers("/api/categorias/**").hasRole("DUENO")
@@ -93,7 +98,8 @@ public class SecurityConfig {
 	 */
 	private static BearerTokenResolver resolverDeToken() {
 		DefaultBearerTokenResolver porDefecto = new DefaultBearerTokenResolver();
-		return peticion -> peticion.getRequestURI().startsWith("/api/auth/") ? null : porDefecto.resolve(peticion);
+		return peticion -> peticion.getRequestURI().startsWith("/api/auth/")
+				|| peticion.getRequestURI().startsWith("/api/mercadopago/") ? null : porDefecto.resolve(peticion);
 	}
 
 	/**

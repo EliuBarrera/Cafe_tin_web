@@ -52,7 +52,7 @@ Una tarea está terminada solo cuando el comando de tests del módulo pasa.
 - **Nunca edites una migración ya aplicada.** Cualquier cambio = nuevo archivo `V<n>__descripcion.sql`,
   y pregunta antes de crearlo.
 - Tablas y columnas en `snake_case` y en español. Precios `NUMERIC(8,2)`. Contraseñas con BCrypt.
-- 15 tablas (las 14 del diagrama + `cafeteria`, V11). Herencia por subtipo: `usuario` → `estudiante` / `trabajador` / `dueno`;
+- 16 tablas (las 14 del diagrama + `cafeteria`, V11, y `oauth_estado`, V13). Herencia por subtipo: `usuario` → `estudiante` / `trabajador` / `dueno`;
   `notificacion` → `alerta_stock`. 1:1: `producto`–`inventario`, `pedido`–`pago`, `pago`–`recibo`.
 
 ### Lo que hace la BD (no lo reimplementes en Java)
@@ -116,8 +116,17 @@ Una sola clase decide las transiciones; cualquier otra → HTTP 409.
 `PENDIENTE` cubre pedidos pagados y sin pagar: lo que los distingue es `pago.estado`, no `pedido.estado`.
 
 Métodos de pago aceptados por la API: `YAPE`, `PLIN`, `TARJETA` (`EFECTIVO` existe en el enum de la BD
-pero se rechaza con 400). Pasarela **simulada** detrás de la interfaz `PasarelaPago`; un rechazo responde
-402 `PAGO_RECHAZADO` y el pedido se conserva. No se guardan datos de tarjeta, solo `referencia`.
+pero se rechaza con 400; `OTRO`, V13, es solo de salida). No se guardan datos de tarjeta, solo `referencia`.
+La pasarela la elige `CAFETIN_PAGOS_PASARELA`:
+- `simulada` (por defecto, tests y dev): `PasarelaPago` cobra al instante; un rechazo responde 402
+  `PAGO_RECHAZADO` y el pedido se conserva.
+- `mercadopago` (paquete `mercadopago`, guía en `docs/mercadopago.md`): `POST /pago` deja el pago `PENDIENTE`
+  con `pago.urlPago` (Checkout Pro, token del cafetín). Lo confirman el webhook (`/api/mercadopago/webhook`,
+  firma `x-signature`) o `POST /api/pedidos/{id}/pago/verificar`, ambos por `CobroMercadoPagoService.aplicar`:
+  idempotente, bloquea pedido → pago (mismo orden que `pagar`), exige monto = `pedido.total`. Si al confirmar
+  falta stock o el pedido se canceló, reembolsa: pago `REEMBOLSADO`, pedido `CANCELADO`.
+- Tokens OAuth de cada cafetín en `cafeteria.mp_*`, cifrados (AES-GCM, `CAFETIN_CIFRADO_LLAVE`) y solo por
+  `CuentaMercadoPagoRepository` (fuera de la entidad `Cafeteria`). En tests, `@MockitoBean ClienteMercadoPago`.
 
 ### Pagos y códigos
 
@@ -194,6 +203,9 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 09/11/2026 · `search_path` con `options=-c search_path=cafetin` en vez de `currentSchema` · Neon ignora `currentSchema` y las conexiones quedaban en `public`: fallaban los triggers (crear pedido, pagar, editar inventario) y las consultas nativas. Testcontainers sí lo respeta; `SearchPathTest` fija la configuración.
 - 19/11/2026 · Varios cafetines en una sola instalación (V11): cada uno con su dueño, trabajadores, categorías, productos y pedidos; alta por `docs/alta-cafeteria.sql`, sin rol ADMIN · paso previo para que cada cafetín cobre en su propia cuenta de Mercado Pago. Las categorías también son por cafetería, para que un dueño no edite las de otro.
 - 19/11/2026 · Pasarela real: Mercado Pago (Checkout Pro + OAuth por cafetín, marketplace con comisión configurable, 0 % por defecto), en una fase posterior · opera en Perú, tiene modo de prueba sin RUC y el dinero llega a la cuenta de cada cafetín. Plin no está en Mercado Pago. Reemplaza la pasarela simulada del 02/11/2026 cuando se implemente.
+- 19/11/2026 · Aplicación de Mercado Pago de prueba en **Colombia** (`GestionCafetin`, App ID 2512482686914298), moneda `COP` por configuración · el equipo no tiene cuenta de Mercado Pago Perú; para cobrar en Perú solo se cambian credenciales y `CAFETIN_PAGOS_MONEDA=PEN`, sin código.
+- 19/11/2026 · Con Mercado Pago, si al confirmar un pago aprobado ya no hay stock (o el pedido se canceló) se reembolsa automáticamente: única excepción a "sin reembolsos en la v1" · con Checkout Pro el cobro ocurre antes de saber si queda stock.
+- 19/11/2026 · Contrato de pago aditivo: `POST /pago` sigue pidiendo `metodoPago` (provisional con Mercado Pago; se guarda el que informa MP) y suma `pago.urlPago` y `/pago/verificar` · la app y el panel siguen funcionando con la pasarela simulada mientras se adaptan.
 
 ## Qué no hacer
 
