@@ -64,7 +64,7 @@ class CategoriaProveedorIntegracionTest {
 				.andExpect(jsonPath("$.descripcion").value("Dulces"))
 				.andExpect(jsonPath("$.activo").value(true))), "$.id");
 
-		mvc.perform(get("/api/categorias").with(como(datos.estudiante(), "ESTUDIANTE")))
+		mvc.perform(get("/api/categorias").param("cafeteria", "1").with(como(datos.estudiante(), "ESTUDIANTE")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[*].id", hasItem(id)));
 	}

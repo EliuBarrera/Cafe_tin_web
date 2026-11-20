@@ -17,7 +17,11 @@ public class Proveedor {
 	@Column(name = "id_proveedor")
 	private Integer id;
 
-	@Column(nullable = false, length = 100, unique = true)
+	/** Cafetería a la que pertenece (V11). */
+	@Column(name = "id_cafeteria", nullable = false, updatable = false)
+	private Integer idCafeteria;
+
+	@Column(nullable = false, length = 100)
 	private String nombre;
 
 	@Column(nullable = false, length = 15)
@@ -35,7 +39,8 @@ public class Proveedor {
 	protected Proveedor() {
 	}
 
-	public Proveedor(String nombre, String telefono) {
+	public Proveedor(Integer idCafeteria, String nombre, String telefono) {
+		this.idCafeteria = idCafeteria;
 		this.nombre = nombre;
 		this.telefono = telefono;
 	}
@@ -56,5 +61,7 @@ public class Proveedor {
 
 	public boolean isActivo() { return activo; }
 	public void setActivo(boolean activo) { this.activo = activo; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

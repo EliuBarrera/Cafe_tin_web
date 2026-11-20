@@ -12,6 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
+import pe.edu.ucv.cafetin.cafeterias.dto.CafeteriaResponse;
+import pe.edu.ucv.cafetin.cafeterias.modelo.Cafeteria;
+import pe.edu.ucv.cafetin.cafeterias.repository.CafeteriaRepository;
+import pe.edu.ucv.cafetin.cafeterias.service.CafeteriaService;
 import pe.edu.ucv.cafetin.comun.dto.Pagina;
 import pe.edu.ucv.cafetin.comun.error.ApiException;
 import pe.edu.ucv.cafetin.comun.error.CodigoError;
@@ -51,12 +55,13 @@ public class PedidoService {
 	private final EstudianteRepository estudiantes;
 	private final TransicionesPedido transiciones;
 	private final PasarelaPago pasarela;
+	private final CafeteriaRepository cafeterias;
 	private final EntityManager em;
 	private final SecureRandom azar = new SecureRandom();
 
 	public PedidoService(PedidoRepository pedidos, PagoRepository pagos, ReciboRepository recibos,
 			StockPedidoRepository stock, EstudianteRepository estudiantes, TransicionesPedido transiciones,
-			PasarelaPago pasarela, EntityManager em) {
+			PasarelaPago pasarela, CafeteriaRepository cafeterias, EntityManager em) {
 		this.pedidos = pedidos;
 		this.transiciones = transiciones;
 		this.pasarela = pasarela;
@@ -64,20 +69,25 @@ public class PedidoService {
 		this.recibos = recibos;
 		this.stock = stock;
 		this.estudiantes = estudiantes;
+		this.cafeterias = cafeterias;
 		this.em = em;
 	}
 
 	@Transactional
 	public PedidoResponse crear(Integer idEstudiante, CrearPedidoRequest solicitud) {
+		Integer idCafeteria = solicitud.idCafeteria();
+		if (!cafeterias.existsByIdAndActivoTrue(idCafeteria)) {
+			throw new ApiException.NoEncontrado("No existe la cafetería " + idCafeteria);
+		}
 		List<Integer> ids = solicitud.items().stream().map(ItemPedidoRequest::idProducto).toList();
-		Map<Integer, Inventario> inventarios = stock.deProductosActivos(ids).stream()
+		Map<Integer, Inventario> inventarios = stock.deProductosActivos(idCafeteria, ids).stream()
 				.collect(Collectors.toMap(i -> i.getProducto().getId(), Function.identity()));
 
 		for (ItemPedidoRequest item : solicitud.items()) {
 			Inventario inv = inventarios.get(item.idProducto());
 			if (inv == null) {
 				throw new ApiException(CodigoError.STOCK_INSUFICIENTE,
-						"El producto " + item.idProducto() + " no está disponible");
+						"El producto " + item.idProducto() + " no está disponible en este cafetín");
 			}
 			if (inv.getCantidadDisponible() < item.cantidad()) {
 				throw new ApiException(CodigoError.STOCK_INSUFICIENTE, "Solo quedan %d unidades de %s"
@@ -86,7 +96,7 @@ public class PedidoService {
 		}
 
 		String codigo = "PED-" + pedidos.siguienteNumeroCodigo();
-		Pedido pedido = new Pedido(codigo, estudiantes.getReferenceById(idEstudiante), solicitud.horaRecojo());
+		Pedido pedido = new Pedido(idCafeteria, codigo, estudiantes.getReferenceById(idEstudiante), solicitud.horaRecojo());
 		pedido.setObservacion(solicitud.observacion());
 		for (ItemPedidoRequest item : solicitud.items()) {
 			pedido.agregarDetalle(inventarios.get(item.idProducto()).getProducto(), item.cantidad());
@@ -186,10 +196,14 @@ public class PedidoService {
 				.collect(Collectors.toMap(p -> p.getPedido().getId(), Function.identity()));
 		Map<Integer, Long> unidades = pedidos.unidadesPorPedido(ids).stream()
 				.collect(Collectors.toMap(f -> (Integer) f[0], f -> ((Number) f[1]).longValue()));
+		Map<Integer, CafeteriaResponse> cafeteriaPorId = cafeterias
+				.findAllById(page.getContent().stream().map(Pedido::getIdCafeteria).distinct().toList()).stream()
+				.collect(Collectors.toMap(Cafeteria::getId, CafeteriaService::aRespuesta));
 
 		return Pagina.de(page, p -> {
 			Pago pago = pagosPorPedido.get(p.getId());
-			return new PedidoResumenResponse(p.getId(), p.getCodigoPedido(), p.getEstado(),
+			return new PedidoResumenResponse(p.getId(), p.getCodigoPedido(), cafeteriaPorId.get(p.getIdCafeteria()),
+					p.getEstado(),
 					pago == null ? null : pago.getEstado(), p.getFechaHora(), p.getHoraRecojo(), p.getTotal(),
 					unidades.getOrDefault(p.getId(), 0L).intValue());
 		});
@@ -214,7 +228,9 @@ public class PedidoService {
 				: recibos.findByPagoId(pago.getId())
 						.map(r -> new ReciboResponse(r.getCodigoVerificacion(), r.getFechaEmision(), r.isVerificado()))
 						.orElse(null);
-		return new PedidoResponse(p.getId(), p.getCodigoPedido(), p.getEstado(), p.getFechaHora(), p.getHoraRecojo(),
+		CafeteriaResponse cafeteria = cafeterias.findById(p.getIdCafeteria()).map(CafeteriaService::aRespuesta)
+				.orElse(null);
+		return new PedidoResponse(p.getId(), p.getCodigoPedido(), cafeteria, p.getEstado(), p.getFechaHora(), p.getHoraRecojo(),
 				p.getTotal(), p.getObservacion(), items, pagoResp, reciboResp);
 	}
 

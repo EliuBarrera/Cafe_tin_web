@@ -247,9 +247,10 @@ class ReporteIntegracionTest {
 	private int ventaDe(int idProducto, int cantidad, String precio, String estadoPago, String fecha) {
 		int n = DatosPrueba.siguiente();
 		Integer pedido = jdbc.queryForObject("""
-				INSERT INTO pedido (codigo_pedido, id_estudiante, hora_recojo, fecha_hora)
-				VALUES (?, ?, '12:00', CAST(? AS timestamp)) RETURNING id_pedido""",
-				Integer.class, "R-" + n, estudiante, fecha);
+				INSERT INTO pedido (codigo_pedido, id_estudiante, hora_recojo, fecha_hora, id_cafeteria)
+				SELECT ?, ?, '12:00', CAST(? AS timestamp), id_cafeteria FROM producto WHERE id_producto = ?
+				RETURNING id_pedido""",
+				Integer.class, "R-" + n, estudiante, fecha, idProducto);
 		jdbc.update("INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario) VALUES (?, ?, ?, ?)",
 				pedido, idProducto, cantidad, new BigDecimal(precio));
 		BigDecimal total = jdbc.queryForObject("SELECT total FROM pedido WHERE id_pedido = ?", BigDecimal.class, pedido);

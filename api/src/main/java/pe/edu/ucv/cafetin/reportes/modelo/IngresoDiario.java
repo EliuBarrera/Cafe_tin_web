@@ -31,6 +31,9 @@ public class IngresoDiario {
 	@Column(name = "ticket_promedio")
 	private BigDecimal ticketPromedio;
 
+	@Column(name = "id_cafeteria")
+	private Integer idCafeteria;
+
 	protected IngresoDiario() {
 	}
 
@@ -38,5 +41,7 @@ public class IngresoDiario {
 	public Long getPedidosPagados() { return pedidosPagados; }
 	public BigDecimal getIngresoTotal() { return ingresoTotal; }
 	public BigDecimal getTicketPromedio() { return ticketPromedio; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

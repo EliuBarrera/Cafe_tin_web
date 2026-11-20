@@ -6,8 +6,8 @@ import pe.edu.ucv.cafetin.inventario.modelo.Producto;
 
 public interface ProductoRepository extends JpaRepository<Producto, Integer> {
 
-	boolean existsByNombre(String nombre);
+	boolean existsByIdCafeteriaAndNombre(Integer idCafeteria, String nombre);
 
-	boolean existsByNombreAndIdNot(String nombre, Integer id);
+	boolean existsByIdCafeteriaAndNombreAndIdNot(Integer idCafeteria, String nombre, Integer id);
 
 }

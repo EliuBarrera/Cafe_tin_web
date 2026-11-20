@@ -10,6 +10,7 @@ import pe.edu.ucv.cafetin.reportes.modelo.ProductoMasVendido;
 /** Vista {@code v_productos_mas_vendidos} (RF-22). Empates: más ingreso primero y luego por id. */
 public interface ProductoMasVendidoRepository extends JpaRepository<ProductoMasVendido, Integer> {
 
-	List<ProductoMasVendido> findAllByOrderByUnidadesVendidasDescIngresoGeneradoDescIdProductoAsc(Limit limite);
+	List<ProductoMasVendido> findByIdCafeteriaOrderByUnidadesVendidasDescIngresoGeneradoDescIdProductoAsc(Integer idCafeteria,
+			Limit limite);
 
 }

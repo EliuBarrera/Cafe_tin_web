@@ -41,23 +41,42 @@ class TriggersTest {
 		return id;
 	}
 
-	private void dueno() {
+	/** Cafetería que crea V11 para los datos existentes; las demás se crean con {@link #cafeteria(String)}. */
+	private static final int PRINCIPAL = 1;
+
+	private int cafeteria(String nombre) {
+		return jdbc.queryForObject("INSERT INTO cafetin.cafeteria (nombre) VALUES (?) RETURNING id_cafeteria",
+				Integer.class, nombre);
+	}
+
+	private int dueno() {
+		return dueno(PRINCIPAL, "rosa@cafetin.pe");
+	}
+
+	private int dueno(int cafeteria, String correo) {
 		int id = jdbc.queryForObject("""
 				INSERT INTO cafetin.usuario (nombre, apellidos, correo, contrasena, tipo_usuario)
-				VALUES ('Rosa', 'Prueba', 'rosa@cafetin.pe', 'x', 'DUENO') RETURNING id_usuario""",
-				Integer.class);
-		jdbc.update("INSERT INTO cafetin.dueno (id_usuario) VALUES (?)", id);
+				VALUES ('Rosa', 'Prueba', ?, 'x', 'DUENO') RETURNING id_usuario""",
+				Integer.class, correo);
+		jdbc.update("INSERT INTO cafetin.dueno (id_usuario, id_cafeteria) VALUES (?, ?)", id, cafeteria);
+		return id;
 	}
 
 	private int categoria() {
+		return categoria(PRINCIPAL);
+	}
+
+	private int categoria(int cafeteria) {
 		return jdbc.queryForObject(
-				"INSERT INTO cafetin.categoria (nombre) VALUES ('Bebidas') RETURNING id_categoria", Integer.class);
+				"INSERT INTO cafetin.categoria (nombre, id_cafeteria) VALUES ('Bebidas', ?) RETURNING id_categoria",
+				Integer.class, cafeteria);
 	}
 
 	private int producto(int categoria, String nombre, String precio, int stock, int minimo) {
 		int id = jdbc.queryForObject("""
-				INSERT INTO cafetin.producto (id_categoria, nombre, precio) VALUES (?, ?, ?::numeric)
-				RETURNING id_producto""", Integer.class, categoria, nombre, precio);
+				INSERT INTO cafetin.producto (id_categoria, nombre, precio, id_cafeteria)
+				SELECT ?, ?, ?::numeric, id_cafeteria FROM cafetin.categoria WHERE id_categoria = ?
+				RETURNING id_producto""", Integer.class, categoria, nombre, precio, categoria);
 		jdbc.update("""
 				INSERT INTO cafetin.inventario (id_producto, cantidad_disponible, stock_minimo)
 				VALUES (?, ?, ?)""", id, stock, minimo);
@@ -65,10 +84,14 @@ class TriggersTest {
 	}
 
 	private int pedido(int estudiante) {
+		return pedido(estudiante, PRINCIPAL);
+	}
+
+	private int pedido(int estudiante, int cafeteria) {
 		return jdbc.queryForObject("""
-				INSERT INTO cafetin.pedido (codigo_pedido, id_estudiante, hora_recojo)
-				VALUES ('PED-' || nextval('cafetin.pedido_id_pedido_seq'), ?, '12:00') RETURNING id_pedido""",
-				Integer.class, estudiante);
+				INSERT INTO cafetin.pedido (codigo_pedido, id_estudiante, hora_recojo, id_cafeteria)
+				VALUES ('PED-' || nextval('cafetin.pedido_id_pedido_seq'), ?, '12:00', ?) RETURNING id_pedido""",
+				Integer.class, estudiante, cafeteria);
 	}
 
 	private void detalle(int pedido, int producto, int cantidad, String precio) {
@@ -171,6 +194,57 @@ class TriggersTest {
 				"SELECT estado_stock FROM cafetin.v_catalogo_disponible WHERE id_producto = ?", String.class, cafe);
 		assertThat(activo).isTrue();
 		assertThat(estado).isEqualTo("AGOTADO");
+	}
+
+	// ------------------------------------------------------- cafeterías (V11)
+
+	@Test
+	void alertaSoloLlegaALosDuenosDeLaCafeteriaDelProducto() {
+		int otra = cafeteria("Cafetín Norte");
+		int duenoPrincipal = dueno();
+		int duenoOtra = dueno(otra, "norte@cafetin.pe");
+		int cafe = producto(categoria(otra), "Café", "2.50", 12, 10);
+
+		jdbc.update("UPDATE cafetin.inventario SET cantidad_disponible = 0 WHERE id_producto = ?", cafe);
+
+		var destinatarios = jdbc.queryForList("""
+				SELECT n.id_usuario FROM cafetin.alerta_stock a
+				JOIN cafetin.notificacion n USING (id_notificacion)
+				JOIN cafetin.inventario i ON i.id_inventario = a.id_inventario
+				WHERE i.id_producto = ?""", Integer.class, cafe);
+		assertThat(destinatarios).containsExactly(duenoOtra).doesNotContain(duenoPrincipal);
+	}
+
+	@Test
+	void pedidoNoAdmiteProductosDeOtraCafeteria() {
+		int otra = cafeteria("Cafetín Sur");
+		int cafeDeOtra = producto(categoria(otra), "Café", "2.50", 20, 5);
+		int pedido = pedido(estudiante(), PRINCIPAL);
+
+		assertThatThrownBy(() -> detalle(pedido, cafeDeOtra, 1, "2.50"))
+				.isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void productoNoAdmiteCategoriaDeOtraCafeteria() {
+		int otra = cafeteria("Cafetín Este");
+		int categoriaDeOtra = categoria(otra);
+
+		assertThatThrownBy(() -> jdbc.update("""
+				INSERT INTO cafetin.producto (id_categoria, nombre, precio, id_cafeteria)
+				VALUES (?, 'Café', 2.50, ?)""", categoriaDeOtra, PRINCIPAL))
+				.isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void dosCafeteriasPuedenTenerProductosConElMismoNombre() {
+		int otra = cafeteria("Cafetín Oeste");
+		producto(categoria(), "Café pasado", "2.50", 10, 2);
+		producto(categoria(otra), "Café pasado", "3.00", 10, 2);
+
+		Integer cuantos = jdbc.queryForObject(
+				"SELECT count(*) FROM cafetin.producto WHERE nombre = 'Café pasado'", Integer.class);
+		assertThat(cuantos).isEqualTo(2);
 	}
 
 }

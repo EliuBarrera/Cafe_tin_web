@@ -2,7 +2,8 @@ package pe.edu.ucv.cafetin.app.datos
 
 /** Operaciones de pedido que usan las pantallas. Interfaz para probar los ViewModels sin red. */
 interface Pedidos {
-    suspend fun catalogo(): List<ProductoCatalogo>
+    suspend fun cafeterias(): List<Cafeteria>
+    suspend fun catalogo(idCafeteria: Int): List<ProductoCatalogo>
     suspend fun crear(solicitud: CrearPedidoRequest): PedidoResponse
     suspend fun pagar(idPedido: Int, metodoPago: String): PedidoResponse
     suspend fun cancelar(idPedido: Int): PedidoResponse
@@ -19,7 +20,9 @@ interface Pedidos {
 /** RF-04 a RF-09. Todo error llega como [ErrorApi]: las pantallas deciden por su `codigo`. */
 class PedidosRepositorio(private val api: ApiCafetin) : Pedidos {
 
-    override suspend fun catalogo() = ClienteApi.llamar { api.catalogo() }
+    override suspend fun cafeterias() = ClienteApi.llamar { api.cafeterias() }
+
+    override suspend fun catalogo(idCafeteria: Int) = ClienteApi.llamar { api.catalogo(idCafeteria) }
 
     override suspend fun crear(solicitud: CrearPedidoRequest) = ClienteApi.llamar { api.crearPedido(solicitud) }
 

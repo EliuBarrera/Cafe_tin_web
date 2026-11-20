@@ -19,6 +19,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
 	boolean existsByIdAndActivoTrue(Integer id);
 
+	/** Cafetería del dueño o del trabajador; vacío para un estudiante. */
+	@Query(value = """
+			SELECT COALESCE(d.id_cafeteria, t.id_cafeteria) FROM usuario u
+			LEFT JOIN dueno d ON d.id_usuario = u.id_usuario
+			LEFT JOIN trabajador t ON t.id_usuario = u.id_usuario
+			WHERE u.id_usuario = :id AND COALESCE(d.id_cafeteria, t.id_cafeteria) IS NOT NULL""", nativeQuery = true)
+	Optional<Integer> cafeteriaDe(@Param("id") Integer id);
+
 	/** Solo la columna: cargar el {@code Usuario} completo haría joins con las tres tablas de subtipo. */
 	@Query(value = "SELECT fcm_token FROM usuario WHERE id_usuario = :id", nativeQuery = true)
 	Optional<String> fcmToken(@Param("id") Integer id);

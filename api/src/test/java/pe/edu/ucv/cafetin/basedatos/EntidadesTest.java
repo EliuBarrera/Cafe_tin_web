@@ -63,8 +63,9 @@ class EntidadesTest {
 		assertThat(((Estudiante) eliu).getCodigo()).isEqualTo("2021045678");
 		assertThat(eliu.getFechaRegistro()).isNotNull();
 
-		Long trabajadores = em.createQuery("SELECT count(t) FROM Trabajador t", Long.class).getSingleResult();
-		assertThat(trabajadores).isEqualTo(2);
+		Long trabajadores = em.createQuery("SELECT count(t) FROM Trabajador t WHERE t.idCafeteria = 1", Long.class)
+				.getSingleResult();
+		assertThat(trabajadores).isEqualTo(2); // el de la segunda cafetería (V12) no cuenta
 	}
 
 	@Test
@@ -88,7 +89,8 @@ class EntidadesTest {
 
 	@Test
 	void lasCincoVistasSeLeenComoEntidades() {
-		var catalogo = em.createQuery("SELECT c FROM CatalogoDisponible c", CatalogoDisponible.class).getResultList();
+		var catalogo = em.createQuery("SELECT c FROM CatalogoDisponible c WHERE c.idCafeteria = 1", CatalogoDisponible.class)
+				.getResultList();
 		var despacho = em.createQuery(
 				"SELECT p FROM PedidoEnCurso p WHERE p.estadoPago = :pagado", PedidoEnCurso.class)
 				.setParameter("pagado", EstadoPago.PAGADO).getResultList();
@@ -117,7 +119,7 @@ class EntidadesTest {
 
 		Producto cafe = em.find(Producto.class, 7);   // 2.50
 		Producto jugo = em.find(Producto.class, 6);   // 4.50
-		Pedido pedido = new Pedido("PED-9001", nueva, LocalTime.of(11, 30));
+		Pedido pedido = new Pedido(1, "PED-9001", nueva, LocalTime.of(11, 30));
 		pedido.agregarDetalle(cafe, 2);
 		pedido.agregarDetalle(jugo, 1);
 		em.persist(pedido);
@@ -140,7 +142,7 @@ class EntidadesTest {
 				.setParameter("p", galletas).getSingleResult();
 		int antes = inv.getCantidadDisponible();
 
-		Pedido pedido = new Pedido("PED-9002", diego, LocalTime.of(15, 0));
+		Pedido pedido = new Pedido(1, "PED-9002", diego, LocalTime.of(15, 0));
 		pedido.agregarDetalle(galletas, 3);
 		em.persist(pedido);
 		em.flush();

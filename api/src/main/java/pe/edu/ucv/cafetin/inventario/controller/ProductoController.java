@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import pe.edu.ucv.cafetin.cuentas.seguridad.UsuarioActual;
 import pe.edu.ucv.cafetin.comun.dto.EstadoRequest;
 import pe.edu.ucv.cafetin.comun.error.ErrorRespuesta;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.InventarioResponse;
@@ -38,8 +39,11 @@ public class ProductoController {
 
 	private final ProductoService servicio;
 
-	public ProductoController(ProductoService servicio) {
+	private final UsuarioActual usuarioActual;
+
+	public ProductoController(ProductoService servicio, UsuarioActual usuarioActual) {
 		this.servicio = servicio;
+		this.usuarioActual = usuarioActual;
 	}
 
 	@GetMapping("/productos")
@@ -47,13 +51,13 @@ public class ProductoController {
 	public List<ProductoResponse> listar(
 			@Parameter(description = "true = solo activos; false = solo deshabilitados; vacío = todos")
 			@RequestParam(required = false) Boolean activo) {
-		return servicio.listar(activo);
+		return servicio.listar(usuarioActual.cafeteria(), activo);
 	}
 
 	@GetMapping("/productos/{id}")
 	@Operation(summary = "Ver producto", description = "DUENO · RF-19")
 	public ProductoResponse obtener(@PathVariable Integer id) {
-		return servicio.obtener(id);
+		return servicio.obtener(usuarioActual.cafeteria(), id);
 	}
 
 	@PostMapping("/productos")
@@ -62,7 +66,7 @@ public class ProductoController {
 	@ApiResponse(responseCode = "409", description = "Ya existe un producto con ese nombre (CONFLICTO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public ProductoResponse registrar(@Valid @RequestBody ProductoRequest solicitud) {
-		return servicio.registrar(solicitud);
+		return servicio.registrar(usuarioActual.cafeteria(), solicitud);
 	}
 
 	@PutMapping("/productos/{id}")
@@ -70,19 +74,19 @@ public class ProductoController {
 	@ApiResponse(responseCode = "409", description = "Ya existe un producto con ese nombre (CONFLICTO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
 	public ProductoResponse actualizar(@PathVariable Integer id, @Valid @RequestBody ProductoActualizarRequest solicitud) {
-		return servicio.actualizar(id, solicitud);
+		return servicio.actualizar(usuarioActual.cafeteria(), id, solicitud);
 	}
 
 	@PatchMapping("/productos/{id}/estado")
 	@Operation(summary = "Habilitar o deshabilitar producto", description = "DUENO · RF-19. Deshabilitado = oculto del catálogo, sin borrarlo.")
 	public ProductoResponse cambiarEstado(@PathVariable Integer id, @Valid @RequestBody EstadoRequest solicitud) {
-		return servicio.cambiarEstado(id, solicitud.activo());
+		return servicio.cambiarEstado(usuarioActual.cafeteria(), id, solicitud.activo());
 	}
 
 	@PatchMapping("/inventario/{idProducto}/recarga")
 	@Operation(summary = "Recargar stock", description = "DUENO · RF-18. Suma unidades y actualiza la fecha; marca como atendidas las alertas abiertas del producto.")
 	public InventarioResponse recargar(@PathVariable Integer idProducto, @Valid @RequestBody RecargaRequest solicitud) {
-		return servicio.recargar(idProducto, solicitud.cantidad());
+		return servicio.recargar(usuarioActual.cafeteria(), idProducto, solicitud.cantidad());
 	}
 
 }

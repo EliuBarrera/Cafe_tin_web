@@ -81,7 +81,7 @@ fun PantallaPago(vm: PagoViewModel, alPagar: (Int) -> Unit) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 item {
                     Text("Pagar pedido", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
-                    Text("${pedido.codigoPedido} · recojo a las ${pedido.horaRecojo ?: "—"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("${pedido.codigoPedido} · recojo a las ${pedido.horaRecojo ?: "—"}${pedido.cafeteria?.let { " en ${it.nombre}" }.orEmpty()}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 item { DetalleLineas(pedido) }
                 item {
@@ -159,7 +159,7 @@ fun PantallaPedido(vm: PedidoViewModel, alPagar: (Int) -> Unit) {
                     Text(pedido.codigoPedido, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f).semantics { heading() })
                     EtiquetaEstado(pedido.estado, pedido.pago?.estado)
                 }
-                Text("Recojo a las ${pedido.horaRecojo ?: "—"} · pedido el ${fechaCorta(pedido.fechaHora)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Recojo a las ${pedido.horaRecojo ?: "—"}${pedido.cafeteria?.let { " en ${it.nombre}" }.orEmpty()} · pedido el ${fechaCorta(pedido.fechaHora)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (pedido.estado == "LISTO") item { BannerListo() }
             val paso = pasoActual(pedido.estado, pedido.pago?.estado)
@@ -315,7 +315,7 @@ private fun FilaPedido(p: PedidoResumen, repitiendo: Boolean, alPulsar: () -> Un
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "${fechaCorta(p.fechaHora)} · ${p.cantidadProductos} prod. · ${soles(p.total)}",
+                    listOfNotNull(fechaCorta(p.fechaHora), p.cafeteria?.nombre, "${p.cantidadProductos} prod.", soles(p.total)).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),

@@ -79,7 +79,7 @@ class PagoPedidoIntegracionTest {
 		int cafe = datos.producto(cat, "2.50", 10);
 		int tamal = datos.producto(cat, "4.00", 6);
 		String pedido = cuerpo(crear(estudiante, """
-				{"horaRecojo": "12:50", "items": [{"idProducto": %d, "cantidad": 2}, {"idProducto": %d, "cantidad": 1}]}"""
+				{"idCafeteria": 1, "horaRecojo": "12:50", "items": [{"idProducto": %d, "cantidad": 2}, {"idProducto": %d, "cantidad": 1}]}"""
 				.formatted(cafe, tamal)));
 		int id = JsonPath.read(pedido, "$.id");
 		String numero = JsonPath.<String>read(pedido, "$.codigoPedido").substring("PED-".length());
@@ -322,7 +322,7 @@ class PagoPedidoIntegracionTest {
 	}
 
 	private static String unItem(int idProducto, int cantidad) {
-		return "{\"horaRecojo\": \"12:50\", \"items\": [{\"idProducto\": %d, \"cantidad\": %d}]}"
+		return "{\"idCafeteria\": 1, \"horaRecojo\": \"12:50\", \"items\": [{\"idProducto\": %d, \"cantidad\": %d}]}"
 				.formatted(idProducto, cantidad);
 	}
 

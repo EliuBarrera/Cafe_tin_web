@@ -16,6 +16,10 @@ interface AlmacenSesion {
     suspend fun cargar(): Sesion?
     suspend fun guardar(sesion: Sesion)
     suspend fun borrar()
+
+    /** Último cafetín elegido, para no preguntarlo cada vez. Por defecto no se recuerda (tests). */
+    suspend fun cafeteriaElegida(): Int? = null
+    suspend fun recordarCafeteria(idCafeteria: Int) {}
 }
 
 private val Context.datosSesion by preferencesDataStore(name = "sesion")
@@ -43,6 +47,12 @@ class AlmacenSesionDataStore(private val contexto: Context) : AlmacenSesion {
         token = sesion.token
     }
 
+    override suspend fun cafeteriaElegida(): Int? = contexto.datosSesion.data.first()[CAFETERIA]
+
+    override suspend fun recordarCafeteria(idCafeteria: Int) {
+        contexto.datosSesion.edit { it[CAFETERIA] = idCafeteria }
+    }
+
     override suspend fun borrar() {
         contexto.datosSesion.edit { it.clear() }
         token = null
@@ -53,5 +63,6 @@ class AlmacenSesionDataStore(private val contexto: Context) : AlmacenSesion {
         val ID = intPreferencesKey("id_usuario")
         val NOMBRE = stringPreferencesKey("nombre")
         val ROL = stringPreferencesKey("rol")
+        val CAFETERIA = intPreferencesKey("id_cafeteria")
     }
 }

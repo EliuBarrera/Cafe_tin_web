@@ -36,6 +36,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import kotlinx.coroutines.launch
 import pe.edu.ucv.cafetin.app.R
+import pe.edu.ucv.cafetin.app.datos.AlmacenSesion
 import pe.edu.ucv.cafetin.app.datos.Cuentas
 import pe.edu.ucv.cafetin.app.datos.Pedidos
 import pe.edu.ucv.cafetin.app.datos.Sesion
@@ -87,7 +88,7 @@ private val PESTANAS = listOf(
  * rechaza (token vencido o cuenta desactivada), al login. Lo mismo si la rechaza después, en cualquier pantalla.
  */
 @Composable
-fun AppCafetin(cuentas: Cuentas, pedidos: Pedidos) {
+fun AppCafetin(cuentas: Cuentas, pedidos: Pedidos, almacen: AlmacenSesion? = null) {
     var revisando by remember { mutableStateOf(true) }
     var sesion by remember { mutableStateOf<Sesion?>(null) }
     LaunchedEffect(Unit) {
@@ -156,7 +157,13 @@ fun AppCafetin(cuentas: Cuentas, pedidos: Pedidos) {
             // ------------------------------------------------ Estudiante con sesión (RF-04 a RF-09)
             composable(Rutas.CATALOGO) {
                 PantallaCatalogo(
-                    vm = viewModel(factory = viewModelFactory { initializer { CatalogoViewModel(pedidos, carrito) } }),
+                    vm = viewModel(factory = viewModelFactory { initializer {
+                        CatalogoViewModel(
+                            pedidos, carrito,
+                            preferida = { almacen?.cafeteriaElegida() },
+                            recordar = { id -> almacen?.recordarCafeteria(id) },
+                        )
+                    } }),
                     nombre = sesion?.nombre.orEmpty(),
                     alCerrarSesion = { alcance.launch { cuentas.cerrarSesion(); alSalir() } },
                     alVerCarrito = { irAPestana(nav, Rutas.CARRITO) },

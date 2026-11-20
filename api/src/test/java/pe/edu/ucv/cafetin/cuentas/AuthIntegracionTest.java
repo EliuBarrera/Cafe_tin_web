@@ -291,7 +291,7 @@ class AuthIntegracionTest {
 		String dueno = bearer(crearDueno());
 		String nueva = "{\"nombre\": \"Postres\"}";
 
-		mvc.perform(get("/api/categorias").header(HttpHeaders.AUTHORIZATION, estudiante)).andExpect(status().isOk());
+		mvc.perform(get("/api/categorias").param("cafeteria", "1").header(HttpHeaders.AUTHORIZATION, estudiante)).andExpect(status().isOk());
 		mvc.perform(post("/api/categorias").header(HttpHeaders.AUTHORIZATION, estudiante)
 				.contentType(MediaType.APPLICATION_JSON).content(nueva)).andExpect(status().isForbidden());
 		mvc.perform(post("/api/categorias").header(HttpHeaders.AUTHORIZATION, dueno)
@@ -348,12 +348,12 @@ class AuthIntegracionTest {
 
 	private Dueno crearDueno() {
 		int n = SECUENCIA.incrementAndGet();
-		return usuarios.save(new Dueno("Rosa", "Prueba", "dueno" + n + "@cafetin.pe", encoder.encode(CLAVE)));
+		return usuarios.save(new Dueno(1, "Rosa", "Prueba", "dueno" + n + "@cafetin.pe", encoder.encode(CLAVE)));
 	}
 
 	private Trabajador crearTrabajador() {
 		int n = SECUENCIA.incrementAndGet();
-		return usuarios.save(new Trabajador("Luis", "Prueba", "trb" + n + "@cafetin.pe", encoder.encode(CLAVE),
+		return usuarios.save(new Trabajador(1, "Luis", "Prueba", "trb" + n + "@cafetin.pe", encoder.encode(CLAVE),
 				"T" + n, Turno.MANANA));
 	}
 

@@ -30,8 +30,11 @@ interface ApiCafetin {
 
     // ---------------------------------------------------------------- Pedidos (RF-04 a RF-09)
 
+    @GET("api/cafeterias")
+    suspend fun cafeterias(): List<Cafeteria>
+
     @GET("api/catalogo")
-    suspend fun catalogo(): List<ProductoCatalogo>
+    suspend fun catalogo(@Query("cafeteria") idCafeteria: Int): List<ProductoCatalogo>
 
     @POST("api/pedidos")
     suspend fun crearPedido(@Body solicitud: CrearPedidoRequest): PedidoResponse

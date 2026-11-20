@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import pe.edu.ucv.cafetin.TestcontainersConfiguration;
 
 /**
- * Verifica que V2 (datos de prueba del perfil dev) se aplica y deja datos útiles.
+ * Verifica que V2 y V12 (datos de prueba del perfil dev) se aplican y dejan datos útiles.
  * Usa su propio contenedor porque agrega db/datos-dev a las ubicaciones de Flyway.
  */
 @SpringBootTest(properties = "spring.flyway.locations=classpath:db/migration,classpath:db/datos-dev")
@@ -29,7 +29,7 @@ class DatosDevTest {
 		var hashes = jdbc.queryForList("SELECT contrasena FROM cafetin.usuario", String.class);
 		var bcrypt = new BCryptPasswordEncoder();
 
-		assertThat(hashes).hasSize(6).allSatisfy(h -> assertThat(bcrypt.matches("Cafetin2026", h)).isTrue());
+		assertThat(hashes).hasSize(8).allSatisfy(h -> assertThat(bcrypt.matches("Cafetin2026", h)).isTrue());
 	}
 
 	@Test
@@ -45,6 +45,19 @@ class DatosDevTest {
 		assertThat(menu).isEqualTo(37);
 		assertThat(dias).isEqualTo(4);
 		assertThat(montosDistintos).isZero();
+	}
+
+	@Test
+	void seedTieneDosCafeteriasCadaUnaConSuDuenoYProductos() {
+		var filas = jdbc.queryForList("""
+				SELECT c.nombre,
+				       (SELECT count(*) FROM cafetin.dueno d WHERE d.id_cafeteria = c.id_cafeteria)    AS duenos,
+				       (SELECT count(*) FROM cafetin.producto p WHERE p.id_cafeteria = c.id_cafeteria) AS productos
+				FROM cafetin.cafeteria c ORDER BY c.id_cafeteria""");
+
+		assertThat(filas).extracting(f -> f.get("nombre")).containsExactly("Cafetín principal", "Cafetín Pabellón B");
+		assertThat(filas).extracting(f -> ((Number) f.get("duenos")).intValue()).containsExactly(1, 1);
+		assertThat(filas).extracting(f -> ((Number) f.get("productos")).intValue()).containsExactly(9, 4);
 	}
 
 	@Test

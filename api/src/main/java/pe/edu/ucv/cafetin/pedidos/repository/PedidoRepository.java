@@ -33,10 +33,13 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 	@Query("select p from Pedido p where p.id = :id and p.estudiante.id = :idEstudiante")
 	Optional<Pedido> paraActualizar(@Param("id") Integer id, @Param("idEstudiante") Integer idEstudiante);
 
-	/** Pedido bloqueado (SELECT … FOR UPDATE) para el despacho: dos trabajadores no lo mueven a la vez. */
+	/**
+	 * Pedido bloqueado (SELECT … FOR UPDATE) para el despacho: dos trabajadores no lo mueven a la vez.
+	 * Solo si es de la cafetería de quien despacha: uno de otra se trata como inexistente (404).
+	 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select p from Pedido p where p.id = :id")
-	Optional<Pedido> paraDespacho(@Param("id") Integer id);
+	@Query("select p from Pedido p where p.id = :id and p.idCafeteria = :idCafeteria")
+	Optional<Pedido> paraDespacho(@Param("id") Integer id, @Param("idCafeteria") Integer idCafeteria);
 
 	/** Pedidos con estudiante, trabajador y detalle cargados en una sola consulta (tablero de despacho). */
 	@EntityGraph(attributePaths = { "estudiante", "trabajador", "detalles", "detalles.producto" })

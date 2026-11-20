@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import pe.edu.ucv.cafetin.app.datos.Cafeteria
 import pe.edu.ucv.cafetin.app.datos.ItemPedidoRequest
 import pe.edu.ucv.cafetin.app.datos.LineaPedido
 import pe.edu.ucv.cafetin.app.datos.ProductoCatalogo
@@ -16,8 +17,21 @@ data class LineaCarrito(val producto: ProductoCatalogo, val cantidad: Int) {
 /**
  * Carrito en memoria (RF-05). Vive mientras dura la sesión; se vacía al crear el pedido o al salir.
  * El total aquí es solo una referencia: el que vale es el que calcula la base al crear el pedido.
+ * Es de un solo cafetín: un pedido no mezcla productos de dos (la API lo rechaza).
  */
 class Carrito {
+
+    private val _cafeteria = MutableStateFlow<Cafeteria?>(null)
+    val cafeteria: StateFlow<Cafeteria?> = _cafeteria.asStateFlow()
+
+    /** Cambia de cafetín. Si es otro, el carrito se vacía: quien llama confirma antes con el estudiante. */
+    fun elegir(cafeteria: Cafeteria) {
+        if (_cafeteria.value?.id != cafeteria.id) {
+            vaciar()
+            this.catalogo = emptyList()
+        }
+        _cafeteria.value = cafeteria
+    }
 
     private val _lineas = MutableStateFlow<List<LineaCarrito>>(emptyList())
     val lineas: StateFlow<List<LineaCarrito>> = _lineas.asStateFlow()

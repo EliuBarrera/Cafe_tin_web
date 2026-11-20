@@ -32,6 +32,9 @@ public class ProductoMasVendido {
 	@Column(name = "ingreso_generado")
 	private BigDecimal ingresoGenerado;
 
+	@Column(name = "id_cafeteria")
+	private Integer idCafeteria;
+
 	protected ProductoMasVendido() {
 	}
 
@@ -40,5 +43,7 @@ public class ProductoMasVendido {
 	public String getCategoria() { return categoria; }
 	public Long getUnidadesVendidas() { return unidadesVendidas; }
 	public BigDecimal getIngresoGenerado() { return ingresoGenerado; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

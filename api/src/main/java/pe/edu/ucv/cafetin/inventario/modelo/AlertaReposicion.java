@@ -39,6 +39,9 @@ public class AlertaReposicion {
 	@Column(name = "fecha_actualizacion")
 	private LocalDateTime fechaActualizacion;
 
+	@Column(name = "id_cafeteria")
+	private Integer idCafeteria;
+
 	protected AlertaReposicion() {
 	}
 
@@ -49,5 +52,7 @@ public class AlertaReposicion {
 	public String getProveedor() { return proveedor; }
 	public String getTelefonoProveedor() { return telefonoProveedor; }
 	public LocalDateTime getFechaActualizacion() { return fechaActualizacion; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

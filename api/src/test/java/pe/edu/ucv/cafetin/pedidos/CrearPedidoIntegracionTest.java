@@ -61,7 +61,7 @@ class CrearPedidoIntegracionTest {
 		int tamal = datos.producto(cat, "4.00", 10);
 
 		crear(estudiante, """
-				{"horaRecojo": "12:50", "observacion": "Sin ají",
+				{"idCafeteria": 1, "horaRecojo": "12:50", "observacion": "Sin ají",
 				 "items": [{"idProducto": %d, "cantidad": 2}, {"idProducto": %d, "cantidad": 1}]}"""
 				.formatted(cafe, tamal))
 				.andExpect(status().isCreated())
@@ -138,7 +138,7 @@ class CrearPedidoIntegracionTest {
 		int cafe = datos.producto(cat, "2.50", 10);
 
 		crear(estudiante, """
-				{"horaRecojo": "12:50", "items": [{"idProducto": %d, "cantidad": 1}, {"idProducto": %d, "cantidad": 2}]}"""
+				{"idCafeteria": 1, "horaRecojo": "12:50", "items": [{"idProducto": %d, "cantidad": 1}, {"idProducto": %d, "cantidad": 2}]}"""
 				.formatted(cafe, cafe))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.codigo").value("VALIDACION"));
@@ -146,7 +146,7 @@ class CrearPedidoIntegracionTest {
 
 	@Test
 	void sinItemsResponde400() throws Exception {
-		crear(estudiante, "{\"horaRecojo\": \"12:50\", \"items\": []}")
+		crear(estudiante, "{\"idCafeteria\": 1, \"horaRecojo\": \"12:50\", \"items\": []}")
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.codigo").value("VALIDACION"));
 	}
@@ -232,7 +232,7 @@ class CrearPedidoIntegracionTest {
 	}
 
 	private static String unItem(int idProducto, int cantidad) {
-		return "{\"horaRecojo\": \"12:50\", \"items\": [{\"idProducto\": %d, \"cantidad\": %d}]}"
+		return "{\"idCafeteria\": 1, \"horaRecojo\": \"12:50\", \"items\": [{\"idProducto\": %d, \"cantidad\": %d}]}"
 				.formatted(idProducto, cantidad);
 	}
 

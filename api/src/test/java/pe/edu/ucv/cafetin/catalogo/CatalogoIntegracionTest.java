@@ -53,7 +53,7 @@ class CatalogoIntegracionTest {
 		int deBaja = datos.producto(cat, "3.00", 10);
 		datos.desactivar(deBaja);
 
-		String cuerpo = mvc.perform(get("/api/catalogo").param("categoria", String.valueOf(cat))
+		String cuerpo = mvc.perform(get("/api/catalogo").param("cafeteria", "1").param("categoria", String.valueOf(cat))
 						.with(como(datos.estudiante(), "ESTUDIANTE")))
 				.andExpect(status().isOk())
 				.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
@@ -74,7 +74,7 @@ class CatalogoIntegracionTest {
 		int p1 = datos.producto(cat1, "2.00", 10);
 		int p2 = datos.producto(cat2, "2.00", 10);
 
-		String cuerpo = mvc.perform(get("/api/catalogo").param("categoria", String.valueOf(cat2))
+		String cuerpo = mvc.perform(get("/api/catalogo").param("cafeteria", "1").param("categoria", String.valueOf(cat2))
 						.with(como(1, "TRABAJADOR")))
 				.andExpect(status().isOk())
 				.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
@@ -87,7 +87,7 @@ class CatalogoIntegracionTest {
 		int p1 = datos.producto(datos.categoria(), "2.00", 10);
 		int p2 = datos.producto(datos.categoria(), "2.00", 10);
 
-		String cuerpo = mvc.perform(get("/api/catalogo").with(como(1, "DUENO")))
+		String cuerpo = mvc.perform(get("/api/catalogo").param("cafeteria", "1").with(como(1, "DUENO")))
 				.andExpect(status().isOk())
 				.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
@@ -96,7 +96,7 @@ class CatalogoIntegracionTest {
 
 	@Test
 	void sinTokenResponde401() throws Exception {
-		mvc.perform(get("/api/catalogo"))
+		mvc.perform(get("/api/catalogo").param("cafeteria", "1"))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
 	}

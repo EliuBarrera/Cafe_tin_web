@@ -17,7 +17,11 @@ public class Categoria {
 	@Column(name = "id_categoria")
 	private Integer id;
 
-	@Column(nullable = false, length = 50, unique = true)
+	/** Cafetería a la que pertenece (V11). */
+	@Column(name = "id_cafeteria", nullable = false, updatable = false)
+	private Integer idCafeteria;
+
+	@Column(nullable = false, length = 50)
 	private String nombre;
 
 	@Column(length = 200)
@@ -29,7 +33,8 @@ public class Categoria {
 	protected Categoria() {
 	}
 
-	public Categoria(String nombre, String descripcion) {
+	public Categoria(Integer idCafeteria, String nombre, String descripcion) {
+		this.idCafeteria = idCafeteria;
 		this.nombre = nombre;
 		this.descripcion = descripcion;
 	}
@@ -44,5 +49,7 @@ public class Categoria {
 
 	public boolean isActivo() { return activo; }
 	public void setActivo(boolean activo) { this.activo = activo; }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

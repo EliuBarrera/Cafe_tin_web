@@ -16,7 +16,7 @@ export interface paths {
          * @description DUENO · RF-17. Más recientes primero, con el teléfono del proveedor.
          *     El panel consulta cada 5 s para el contador de alertas.
          */
-        get: operations["listar_6"];
+        get: operations["listar_7"];
         put?: never;
         post?: never;
         delete?: never;
@@ -126,6 +126,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cafeterias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar cafetines
+         * @description Autenticado (cualquier rol). Cafetines activos por nombre: el estudiante elige uno antes de ver
+         *     el catálogo y todo su pedido es de ese cafetín.
+         */
+        get: operations["listar_6"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalogo": {
         parameters: {
             query?: never;
@@ -135,7 +156,7 @@ export interface paths {
         };
         /**
          * Ver catálogo
-         * @description Autenticado (cualquier rol) · RF-04. Productos activos con su stock; incluye los AGOTADO
+         * @description Autenticado (cualquier rol) · RF-04. Productos activos del cafetín con su stock; incluye los AGOTADO
          *     para que la app los muestre deshabilitados. "Tiempo real": la app vuelve a consultar al abrir
          *     la pantalla y antes de pagar.
          */
@@ -157,7 +178,8 @@ export interface paths {
         };
         /**
          * Listar categorías activas
-         * @description Autenticado (cualquier rol) · RF-04. Para los filtros del catálogo.
+         * @description Autenticado (cualquier rol) · RF-04. Para los filtros del catálogo. El estudiante indica el cafetín;
+         *     el dueño y el trabajador ven las de su cafetería si lo omiten.
          */
         get: operations["listar_3"];
         put?: never;
@@ -807,6 +829,18 @@ export interface components {
             /** @enum {string} */
             tipo?: "STOCK_BAJO" | "STOCK_AGOTADO";
         };
+        /** @description Cafetín de la plataforma */
+        CafeteriaResponse: {
+            /**
+             * Format: int32
+             * @example 1
+             */
+            id?: number;
+            /** @example Cafetín principal */
+            nombre?: string;
+            /** @example Campus UCV, pabellón A */
+            ubicacion?: string;
+        };
         /** @description Error de un campo */
         CampoError: {
             /** @example items[0].cantidad */
@@ -839,6 +873,12 @@ export interface components {
              * @example 12:50
              */
             horaRecojo: string;
+            /**
+             * Format: int32
+             * @description Cafetín del pedido: todos los productos deben ser suyos
+             * @example 1
+             */
+            idCafeteria: number;
             /** @description Productos del pedido, sin repetir producto */
             items: components["schemas"]["ItemPedidoRequest"][];
             /** @example Sin ají, por favor */
@@ -1071,6 +1111,8 @@ export interface components {
         };
         /** @description Pedido con su detalle, pago y recibo */
         PedidoResponse: {
+            /** @description Cafetín donde se recoge */
+            cafeteria?: components["schemas"]["CafeteriaResponse"];
             /** @example PED-0426 */
             codigoPedido?: string;
             /** @enum {string} */
@@ -1098,6 +1140,8 @@ export interface components {
         };
         /** @description Pedido en el historial (RF-09) */
         PedidoResumenResponse: {
+            /** @description Cafetín donde se recoge */
+            cafeteria?: components["schemas"]["CafeteriaResponse"];
             /**
              * Format: int32
              * @description Unidades en total
@@ -1363,6 +1407,8 @@ export interface components {
         UsuarioResponse: {
             /** @example Barrera Martínez */
             apellidos?: string;
+            /** @description Cafetín del dueño o trabajador; nulo para un estudiante */
+            cafeteria?: components["schemas"]["CafeteriaResponse"];
             /** @example ebarreram@ucvvirtual.edu.pe */
             correo?: string;
             /**
@@ -1407,7 +1453,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    listar_6: {
+    listar_7: {
         parameters: {
             query?: {
                 /** @description false = solo pendientes (por defecto); true = solo atendidas */
@@ -1715,9 +1761,70 @@ export interface operations {
             };
         };
     };
+    listar_6: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CafeteriaResponse"][];
+                };
+            };
+            /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Sin token o token inválido (NO_AUTENTICADO) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description El rol no tiene acceso (ACCESO_DENEGADO) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Error inesperado (ERROR_INTERNO) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+        };
+    };
     listar_5: {
         parameters: {
-            query?: {
+            query: {
+                /**
+                 * @description Id del cafetín
+                 * @example 1
+                 */
+                cafeteria: number;
                 /** @description Id de categoría para filtrar */
                 categoria?: number;
             };
@@ -1776,7 +1883,10 @@ export interface operations {
     };
     listar_3: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Id del cafetín; obligatorio para el estudiante */
+                cafeteria?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;

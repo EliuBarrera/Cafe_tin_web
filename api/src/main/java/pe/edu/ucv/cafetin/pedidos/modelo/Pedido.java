@@ -48,6 +48,10 @@ public class Pedido {
 	@Column(name = "codigo_pedido", nullable = false, length = 12, unique = true)
 	private String codigoPedido;
 
+	/** Cafetería a la que pertenece (V11). */
+	@Column(name = "id_cafeteria", nullable = false, updatable = false)
+	private Integer idCafeteria;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "id_estudiante", nullable = false)
 	private Estudiante estudiante;
@@ -81,7 +85,8 @@ public class Pedido {
 	protected Pedido() {
 	}
 
-	public Pedido(String codigoPedido, Estudiante estudiante, LocalTime horaRecojo) {
+	public Pedido(Integer idCafeteria, String codigoPedido, Estudiante estudiante, LocalTime horaRecojo) {
+		this.idCafeteria = idCafeteria;
 		this.codigoPedido = codigoPedido;
 		this.estudiante = estudiante;
 		this.horaRecojo = horaRecojo;
@@ -118,5 +123,7 @@ public class Pedido {
 	public void setObservacion(String observacion) { this.observacion = observacion; }
 
 	public List<DetallePedido> getDetalles() { return Collections.unmodifiableList(detalles); }
+
+	public Integer getIdCafeteria() { return idCafeteria; }
 
 }

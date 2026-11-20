@@ -22,7 +22,7 @@ import pe.edu.ucv.cafetin.reportes.repository.VentaRepository;
 
 /**
  * Ingresos del dueño: ventas (RF-20), ingresos por periodo (RF-21) y más vendidos (RF-22).
- * Solo cuentan los pagos PAGADO. Sin fechas, el rango son los últimos 30 días contados en la base.
+ * Cada dueño ve solo su cafetería. Solo cuentan los pagos PAGADO. Sin fechas, el rango son los últimos 30 días contados en la base.
  */
 @Service
 @Transactional(readOnly = true)
@@ -39,19 +39,19 @@ public class ReporteService {
 	}
 
 	/** RF-21. Ordenados del periodo más antiguo al más reciente; los periodos sin ventas no aparecen. */
-	public List<IngresoPeriodoResponse> ingresos(Periodo periodo, LocalDate desde, LocalDate hasta) {
+	public List<IngresoPeriodoResponse> ingresos(Integer idCafeteria, Periodo periodo, LocalDate desde, LocalDate hasta) {
 		Rango r = rango(desde, hasta);
 		String unidad = switch (periodo) {
 			case DIA -> "day";
 			case SEMANA -> "week";
 			case MES -> "month";
 		};
-		return ventas.ingresos(unidad, r.desde(), r.hasta());
+		return ventas.ingresos(idCafeteria, unidad, r.desde(), r.hasta());
 	}
 
 	/** RF-22. Todo el histórico. */
-	public List<ProductoVendidoResponse> masVendidos(int limite) {
-		return masVendidos.findAllByOrderByUnidadesVendidasDescIngresoGeneradoDescIdProductoAsc(Limit.of(limite))
+	public List<ProductoVendidoResponse> masVendidos(Integer idCafeteria, int limite) {
+		return masVendidos.findByIdCafeteriaOrderByUnidadesVendidasDescIngresoGeneradoDescIdProductoAsc(idCafeteria, Limit.of(limite))
 				.stream()
 				.map(p -> new ProductoVendidoResponse(p.getIdProducto(), p.getNombre(), p.getCategoria(),
 						p.getUnidadesVendidas(), p.getIngresoGenerado()))
@@ -59,10 +59,10 @@ public class ReporteService {
 	}
 
 	/** RF-20. Más recientes primero. */
-	public Pagina<VentaResponse> ventas(LocalDate desde, LocalDate hasta, int pagina, int tamano) {
+	public Pagina<VentaResponse> ventas(Integer idCafeteria, LocalDate desde, LocalDate hasta, int pagina, int tamano) {
 		Rango r = rango(desde, hasta);
-		long total = ventas.contarVentas(r.desde(), r.hasta());
-		List<VentaResponse> contenido = ventas.ventas(r.desde(), r.hasta(), pagina, tamano);
+		long total = ventas.contarVentas(idCafeteria, r.desde(), r.hasta());
+		List<VentaResponse> contenido = ventas.ventas(idCafeteria, r.desde(), r.hasta(), pagina, tamano);
 		return Pagina.de(new PageImpl<>(contenido, PageRequest.of(pagina, tamano), total), Function.identity());
 	}
 

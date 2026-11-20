@@ -27,12 +27,13 @@ public class CatalogoController {
 
 	@GetMapping
 	@Operation(summary = "Ver catálogo", description = """
-			Autenticado (cualquier rol) · RF-04. Productos activos con su stock; incluye los AGOTADO
+			Autenticado (cualquier rol) · RF-04. Productos activos del cafetín con su stock; incluye los AGOTADO
 			para que la app los muestre deshabilitados. "Tiempo real": la app vuelve a consultar al abrir
 			la pantalla y antes de pagar.""")
 	public List<ProductoCatalogoResponse> listar(
+			@Parameter(description = "Id del cafetín", example = "1") @RequestParam Integer cafeteria,
 			@Parameter(description = "Id de categoría para filtrar") @RequestParam(required = false) Integer categoria) {
-		return servicio.listar(categoria);
+		return servicio.listar(cafeteria, categoria);
 	}
 
 }

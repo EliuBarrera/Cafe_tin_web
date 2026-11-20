@@ -18,6 +18,7 @@ import pe.edu.ucv.cafetin.inventario.repository.ProveedorRepository;
 
 /**
  * Categorías (lectura para todos, RF-04; escritura del dueño, RF-15) y proveedores (RF-15).
+ * Cada cafetería gestiona las suyas: una de otra cafetería se trata como inexistente (404).
  * Desactivar no borra ni afecta a los productos que ya los usan; solo impide asignarlos a otros.
  */
 @Service
@@ -34,24 +35,24 @@ public class CategoriaProveedorService {
 	// ------------------------------------------------------------ categorías
 
 	@Transactional(readOnly = true)
-	public List<CategoriaResponse> listarCategorias() {
-		return categorias.findByActivoTrueOrderByNombreAsc().stream().map(CategoriaProveedorService::aRespuesta).toList();
+	public List<CategoriaResponse> listarCategorias(Integer idCafeteria) {
+		return categorias.findByIdCafeteriaAndActivoTrueOrderByNombreAsc(idCafeteria).stream().map(CategoriaProveedorService::aRespuesta).toList();
 	}
 
 	@Transactional
-	public CategoriaResponse crearCategoria(CategoriaRequest s) {
+	public CategoriaResponse crearCategoria(Integer idCafeteria, CategoriaRequest s) {
 		String nombre = s.nombre().trim();
-		if (categorias.existsByNombre(nombre)) {
+		if (categorias.existsByIdCafeteriaAndNombre(idCafeteria, nombre)) {
 			throw repetido("una categoría", nombre);
 		}
-		return aRespuesta(categorias.saveAndFlush(new Categoria(nombre, s.descripcion())));
+		return aRespuesta(categorias.saveAndFlush(new Categoria(idCafeteria, nombre, s.descripcion())));
 	}
 
 	@Transactional
-	public CategoriaResponse actualizarCategoria(Integer id, CategoriaRequest s) {
-		Categoria categoria = categoria(id);
+	public CategoriaResponse actualizarCategoria(Integer idCafeteria, Integer id, CategoriaRequest s) {
+		Categoria categoria = categoria(idCafeteria, id);
 		String nombre = s.nombre().trim();
-		if (categorias.existsByNombreAndIdNot(nombre, id)) {
+		if (categorias.existsByIdCafeteriaAndNombreAndIdNot(idCafeteria, nombre, id)) {
 			throw repetido("una categoría", nombre);
 		}
 		categoria.setNombre(nombre);
@@ -60,8 +61,8 @@ public class CategoriaProveedorService {
 	}
 
 	@Transactional
-	public CategoriaResponse cambiarEstadoCategoria(Integer id, boolean activo) {
-		Categoria categoria = categoria(id);
+	public CategoriaResponse cambiarEstadoCategoria(Integer idCafeteria, Integer id, boolean activo) {
+		Categoria categoria = categoria(idCafeteria, id);
 		categoria.setActivo(activo);
 		return aRespuesta(categoria);
 	}
@@ -70,27 +71,27 @@ public class CategoriaProveedorService {
 
 	/** Todos, también los desactivados: el dueño los gestiona desde aquí. */
 	@Transactional(readOnly = true)
-	public List<ProveedorResponse> listarProveedores() {
-		return proveedores.findAllByOrderByNombreAsc().stream().map(CategoriaProveedorService::aRespuesta).toList();
+	public List<ProveedorResponse> listarProveedores(Integer idCafeteria) {
+		return proveedores.findByIdCafeteriaOrderByNombreAsc(idCafeteria).stream().map(CategoriaProveedorService::aRespuesta).toList();
 	}
 
 	@Transactional
-	public ProveedorResponse crearProveedor(ProveedorRequest s) {
+	public ProveedorResponse crearProveedor(Integer idCafeteria, ProveedorRequest s) {
 		String nombre = s.nombre().trim();
-		if (proveedores.existsByNombre(nombre)) {
+		if (proveedores.existsByIdCafeteriaAndNombre(idCafeteria, nombre)) {
 			throw repetido("un proveedor", nombre);
 		}
-		Proveedor proveedor = new Proveedor(nombre, s.telefono());
+		Proveedor proveedor = new Proveedor(idCafeteria, nombre, s.telefono());
 		proveedor.setCorreo(s.correo());
 		proveedor.setDireccion(s.direccion());
 		return aRespuesta(proveedores.saveAndFlush(proveedor));
 	}
 
 	@Transactional
-	public ProveedorResponse actualizarProveedor(Integer id, ProveedorRequest s) {
-		Proveedor proveedor = proveedor(id);
+	public ProveedorResponse actualizarProveedor(Integer idCafeteria, Integer id, ProveedorRequest s) {
+		Proveedor proveedor = proveedor(idCafeteria, id);
 		String nombre = s.nombre().trim();
-		if (proveedores.existsByNombreAndIdNot(nombre, id)) {
+		if (proveedores.existsByIdCafeteriaAndNombreAndIdNot(idCafeteria, nombre, id)) {
 			throw repetido("un proveedor", nombre);
 		}
 		proveedor.setNombre(nombre);
@@ -101,20 +102,20 @@ public class CategoriaProveedorService {
 	}
 
 	@Transactional
-	public ProveedorResponse cambiarEstadoProveedor(Integer id, boolean activo) {
-		Proveedor proveedor = proveedor(id);
+	public ProveedorResponse cambiarEstadoProveedor(Integer idCafeteria, Integer id, boolean activo) {
+		Proveedor proveedor = proveedor(idCafeteria, id);
 		proveedor.setActivo(activo);
 		return aRespuesta(proveedor);
 	}
 
 	// ------------------------------------------------------------------ ayudas
 
-	private Categoria categoria(Integer id) {
-		return categorias.findById(id).orElseThrow(() -> new ApiException.NoEncontrado("No existe la categoría " + id));
+	private Categoria categoria(Integer idCafeteria, Integer id) {
+		return categorias.findByIdAndIdCafeteria(id, idCafeteria).orElseThrow(() -> new ApiException.NoEncontrado("No existe la categoría " + id));
 	}
 
-	private Proveedor proveedor(Integer id) {
-		return proveedores.findById(id).orElseThrow(() -> new ApiException.NoEncontrado("No existe el proveedor " + id));
+	private Proveedor proveedor(Integer idCafeteria, Integer id) {
+		return proveedores.findByIdAndIdCafeteria(id, idCafeteria).orElseThrow(() -> new ApiException.NoEncontrado("No existe el proveedor " + id));
 	}
 
 	private static ApiException repetido(String que, String nombre) {

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import pe.edu.ucv.cafetin.cuentas.seguridad.UsuarioActual;
 import pe.edu.ucv.cafetin.comun.dto.EstadoRequest;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.ProveedorRequest;
 import pe.edu.ucv.cafetin.inventario.dto.InventarioDto.ProveedorResponse;
@@ -29,33 +30,36 @@ public class ProveedorController {
 
 	private final CategoriaProveedorService servicio;
 
-	public ProveedorController(CategoriaProveedorService servicio) {
+	private final UsuarioActual usuarioActual;
+
+	public ProveedorController(CategoriaProveedorService servicio, UsuarioActual usuarioActual) {
 		this.servicio = servicio;
+		this.usuarioActual = usuarioActual;
 	}
 
 	@GetMapping
 	@Operation(summary = "Listar proveedores", description = "DUENO · RF-15")
 	public List<ProveedorResponse> listar() {
-		return servicio.listarProveedores();
+		return servicio.listarProveedores(usuarioActual.cafeteria());
 	}
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	@Operation(summary = "Registrar proveedor", description = "DUENO · RF-15. 409 CONFLICTO si el nombre ya existe.")
 	public ProveedorResponse crear(@Valid @RequestBody ProveedorRequest solicitud) {
-		return servicio.crearProveedor(solicitud);
+		return servicio.crearProveedor(usuarioActual.cafeteria(), solicitud);
 	}
 
 	@PutMapping("/{id}")
 	@Operation(summary = "Editar proveedor", description = "DUENO · RF-15")
 	public ProveedorResponse actualizar(@PathVariable Integer id, @Valid @RequestBody ProveedorRequest solicitud) {
-		return servicio.actualizarProveedor(id, solicitud);
+		return servicio.actualizarProveedor(usuarioActual.cafeteria(), id, solicitud);
 	}
 
 	@PatchMapping("/{id}/estado")
 	@Operation(summary = "Activar o desactivar proveedor", description = "DUENO · RF-15")
 	public ProveedorResponse cambiarEstado(@PathVariable Integer id, @Valid @RequestBody EstadoRequest solicitud) {
-		return servicio.cambiarEstadoProveedor(id, solicitud.activo());
+		return servicio.cambiarEstadoProveedor(usuarioActual.cafeteria(), id, solicitud.activo());
 	}
 
 }

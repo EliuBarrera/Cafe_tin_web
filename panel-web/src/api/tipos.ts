@@ -3,7 +3,9 @@ import type { components } from './esquema'
 type Esquemas = components['schemas']
 
 // openapi-typescript marca como opcionales los campos de respuesta: la API siempre los envía.
-export type Usuario = Required<Esquemas['UsuarioResponse']>
+export type Cafeteria = Required<Omit<Esquemas['CafeteriaResponse'], 'ubicacion'>> & { ubicacion: string | null }
+// La cafetería llega para el dueño y el trabajador (los únicos que entran al panel); nula para un estudiante.
+export type Usuario = Required<Omit<Esquemas['UsuarioResponse'], 'cafeteria'>> & { cafeteria: Cafeteria | null }
 export type Rol = Usuario['rol']
 export type TokenRespuesta = Required<Omit<Esquemas['TokenResponse'], 'usuario'>> & { usuario: Usuario }
 export type CampoError = Esquemas['CampoError']

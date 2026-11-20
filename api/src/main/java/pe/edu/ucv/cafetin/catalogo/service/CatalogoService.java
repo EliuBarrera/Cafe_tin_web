@@ -9,7 +9,7 @@ import pe.edu.ucv.cafetin.catalogo.dto.ProductoCatalogoResponse;
 import pe.edu.ucv.cafetin.catalogo.modelo.CatalogoDisponible;
 import pe.edu.ucv.cafetin.catalogo.repository.CatalogoRepository;
 
-/** RF-04: productos activos con su stock, incluidos los AGOTADO (la app los deshabilita). */
+/** RF-04: productos activos de un cafetín con su stock, incluidos los AGOTADO (la app los deshabilita). */
 @Service
 public class CatalogoService {
 
@@ -20,8 +20,9 @@ public class CatalogoService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<ProductoCatalogoResponse> listar(Integer idCategoria) {
-		List<CatalogoDisponible> filas = idCategoria == null ? catalogo.listar() : catalogo.listarPorCategoria(idCategoria);
+	public List<ProductoCatalogoResponse> listar(Integer idCafeteria, Integer idCategoria) {
+		List<CatalogoDisponible> filas = idCategoria == null ? catalogo.listar(idCafeteria)
+				: catalogo.listarPorCategoria(idCafeteria, idCategoria);
 		return filas.stream().map(CatalogoService::aRespuesta).toList();
 	}
 

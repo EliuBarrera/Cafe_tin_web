@@ -31,10 +31,11 @@ class PedidosRepositorioTest {
         servidor.enqueue(json(200, """[{"idProducto":6,"nombre":"Jugo de piña 500 ml","descripcion":"Natural","precio":4.50,"categoria":"Bebidas","cantidadDisponible":3,"estadoStock":"POCAS UNIDADES"},
             {"idProducto":9,"nombre":"Galleta","precio":1.00,"categoria":"Snacks","cantidadDisponible":0,"estadoStock":"AGOTADO"}]"""))
 
-        val catalogo = pedidos.catalogo()
+        val catalogo = pedidos.catalogo(2)
 
         val peticion = servidor.takeRequest()
         assertEquals("/api/catalogo", peticion.url.encodedPath)
+        assertEquals("2", peticion.url.queryParameter("cafeteria"))
         assertEquals("Bearer jwt-de-ana", peticion.headers["Authorization"])
         assertEquals(4.5, catalogo[0].precio, 0.0)
         assertTrue(catalogo[1].agotado)
@@ -44,9 +45,9 @@ class PedidosRepositorioTest {
     fun crearPedidoEnviaElCarritoSinObservacionVacia() = runTest {
         servidor.enqueue(json(201, PEDIDO_SIN_PAGAR))
 
-        val pedido = pedidos.crear(CrearPedidoRequest("12:50", listOf(ItemPedidoRequest(7, 2))))
+        val pedido = pedidos.crear(CrearPedidoRequest(1, "12:50", listOf(ItemPedidoRequest(7, 2))))
 
-        assertEquals("""{"horaRecojo":"12:50","items":[{"idProducto":7,"cantidad":2}]}""", servidor.takeRequest().body?.utf8())
+        assertEquals("""{"idCafeteria":1,"horaRecojo":"12:50","items":[{"idProducto":7,"cantidad":2}]}""", servidor.takeRequest().body?.utf8())
         assertEquals("PED-430", pedido.codigoPedido)
         assertNull(pedido.pago)
     }

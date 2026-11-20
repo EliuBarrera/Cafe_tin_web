@@ -28,7 +28,7 @@ export function Shell() {
           </span>
           <span>
             <span className="marca">Cafetín UCV</span>
-            <span className="marca-subtitulo">Panel</span>
+            <span className="marca-subtitulo">{usuario.cafeteria?.nombre ?? 'Panel'}</span>
           </span>
         </span>
         <nav aria-label="Principal" className="shell-menu">
