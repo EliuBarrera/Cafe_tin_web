@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { Rol } from './api/tipos'
 import { Alertas } from './paginas/Alertas'
 import { Categorias } from './paginas/Categorias'
+import { Cobros } from './paginas/Cobros'
 import { Despacho } from './paginas/Despacho'
 import { Productos } from './paginas/Productos'
 import { Proveedores } from './paginas/Proveedores'
@@ -29,6 +30,7 @@ export const SECCIONES: Seccion[] = [
   { ruta: 'proveedores', titulo: 'Proveedores', roles: SOLO_DUENO, pagina: <Proveedores /> },
   { ruta: 'alertas', titulo: 'Alertas', roles: SOLO_DUENO, pagina: <Alertas /> },
   { ruta: 'reportes', titulo: 'Reportes', roles: SOLO_DUENO, pagina: <Reportes /> },
+  { ruta: 'cobros', titulo: 'Cobros', roles: SOLO_DUENO, pagina: <Cobros /> },
   { ruta: 'trabajadores', titulo: 'Trabajadores', roles: SOLO_DUENO, pagina: <Trabajadores /> },
 ]
 

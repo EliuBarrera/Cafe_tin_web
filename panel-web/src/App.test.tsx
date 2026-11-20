@@ -159,6 +159,7 @@ describe('rutas protegidas y menú por rol', () => {
       'Proveedores',
       'Alertas',
       'Reportes',
+      'Cobros',
       'Trabajadores',
     ])
   })

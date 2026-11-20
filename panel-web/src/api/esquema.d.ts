@@ -147,6 +147,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cafeterias/mia/mercadopago": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estado de la cuenta de Mercado Pago
+         * @description DUENO · RF-06. Si el cafetín conectó su cuenta y con qué pasarela cobra la API. Nunca devuelve tokens.
+         */
+        get: operations["estado"];
+        put?: never;
+        post?: never;
+        /**
+         * Desconectar Mercado Pago
+         * @description DUENO · RF-06. Borra los tokens del cafetín: deja de aceptar pagos hasta que vuelva a conectar.
+         */
+        delete: operations["desconectar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cafeterias/mia/mercadopago/conectar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Conectar Mercado Pago
+         * @description DUENO · RF-06. Devuelve la página de Mercado Pago donde el dueño autoriza al cafetín a cobrar.
+         *     El panel navega a esa URL; Mercado Pago vuelve a /api/mercadopago/oauth/retorno y de ahí al
+         *     panel con ?mercadopago=conectado o ?mercadopago=error. El enlace vale 10 minutos.
+         */
+        post: operations["conectar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalogo": {
         parameters: {
             query?: never;
@@ -375,6 +421,69 @@ export interface paths {
         patch: operations["recargar"];
         trace?: never;
     };
+    "/api/mercadopago/oauth/retorno": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retorno del OAuth de Mercado Pago
+         * @description Público. Mercado Pago redirige aquí al dueño tras autorizar. Valida el state, guarda los tokens
+         *     cifrados y redirige (302) al panel con ?mercadopago=conectado o ?mercadopago=error.
+         */
+        get: operations["retornoOauth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mercadopago/retorno-pago": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vuelta del checkout
+         * @description Público. Checkout Pro vuelve aquí al terminar (aprobado, rechazado o pendiente) y se redirige (302)
+         *     a la app (cafetin://pago/{pedido}), que confirma con POST /api/pedidos/{id}/pago/verificar.
+         */
+        get: operations["retornoPago"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mercadopago/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Notificación de Mercado Pago
+         * @description Público, con firma x-signature (MP_WEBHOOK_SECRET). Solo atiende pagos: consulta el pago a Mercado
+         *     Pago y lo confirma (idempotente). Firma inválida → 401.
+         */
+        post: operations["webhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pedidos": {
         parameters: {
             query?: never;
@@ -469,11 +578,36 @@ export interface paths {
         put?: never;
         /**
          * Pagar pedido
-         * @description ESTUDIANTE · RF-06, RF-07, RF-16, RF-20. Cobra con la pasarela simulada, pasa el pago a PAGADO
-         *     (la base descuenta el stock) y genera el recibo. Si la pasarela rechaza, el pedido se conserva y
-         *     se puede reintentar con el mismo u otro método. Debe responder en menos de 5 s (RNF-02).
+         * @description ESTUDIANTE · RF-06, RF-07, RF-16, RF-20. Con la pasarela simulada cobra al instante, pasa el pago a
+         *     PAGADO (la base descuenta el stock) y genera el recibo. Si la pasarela rechaza, el pedido se conserva
+         *     y se puede reintentar con el mismo u otro método. Debe responder en menos de 5 s (RNF-02).
+         *     Con Mercado Pago deja el pago PENDIENTE y devuelve pago.urlPago (Checkout Pro): la app la abre y, al
+         *     volver, llama a POST /api/pedidos/{id}/pago/verificar. Cada llamada genera un enlace nuevo.
          */
         post: operations["pagar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pedidos/{id}/pago/verificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verificar pago en Mercado Pago
+         * @description ESTUDIANTE (propio) · RF-06, RF-07. La app la llama al volver de Checkout Pro: consulta a Mercado
+         *     Pago y, si el pago se aprobó, lo confirma (PAGADO, stock descontado, recibo). Es idempotente y
+         *     equivale al webhook. Si se aprobó pero ya no hay stock, el cobro se reembolsa y el pedido queda
+         *     CANCELADO con el pago REEMBOLSADO. Con la pasarela simulada solo devuelve el pedido.
+         */
+        post: operations["verificarPago"];
         delete?: never;
         options?: never;
         head?: never;
@@ -899,6 +1033,27 @@ export interface components {
              */
             mensaje?: string;
         };
+        /** @description Cuenta de Mercado Pago del cafetín (nunca incluye tokens) */
+        EstadoConexionResponse: {
+            /** @description Si el cafetín conectó su cuenta de Mercado Pago */
+            conectado?: boolean;
+            /**
+             * Format: date-time
+             * @description Cuándo se conectó; nulo si no está conectado
+             */
+            conectadoEn?: string;
+            /**
+             * Format: int64
+             * @description Id del usuario vendedor en Mercado Pago; nulo si no está conectado
+             * @example 3862056228
+             */
+            idUsuarioMp?: number;
+            /**
+             * @description Pasarela con la que cobra la API
+             * @enum {string}
+             */
+            pasarela?: "SIMULADA" | "MERCADOPAGO";
+        };
         /** @description Activar o desactivar sin borrar */
         EstadoRequest: {
             /** @example false */
@@ -1007,7 +1162,10 @@ export interface components {
             /** @description PEDIDO_CONFIRMADO, PEDIDO_LISTO, PEDIDO_ENTREGADO, PEDIDO_CANCELADO, STOCK_BAJO o STOCK_AGOTADO */
             tipo?: string;
         };
-        /** @description Método de pago (RF-06). En la v1 solo YAPE, PLIN o TARJETA */
+        /**
+         * @description Método de pago (RF-06). En la v1 solo YAPE, PLIN o TARJETA. Con Mercado Pago es provisional: el
+         *     estudiante elige el medio en Checkout Pro y al confirmar se guarda el que informa Mercado Pago.
+         */
         PagarRequest: {
             /**
              * @example YAPE
@@ -1072,7 +1230,7 @@ export interface components {
             /** Format: date-time */
             fecha?: string;
             /** @enum {string} */
-            metodoPago?: "YAPE" | "PLIN" | "TARJETA" | "EFECTIVO";
+            metodoPago?: "YAPE" | "PLIN" | "TARJETA" | "EFECTIVO" | "OTRO";
             /** @example 10.5 */
             monto?: number;
             /**
@@ -1080,6 +1238,12 @@ export interface components {
              * @example PL-220931
              */
             referencia?: string;
+            /**
+             * @description Página de Checkout Pro donde el estudiante paga (pasarela Mercado Pago). Nula con la pasarela
+             *     simulada o cuando el pago ya se confirmó.
+             * @example https://www.mercadopago.com.pe/checkout/v1/redirect?pref_id=…
+             */
+            urlPago?: string;
         };
         /** @description Pedido pagado en el tablero de despacho */
         PedidoDespachoResponse: {
@@ -1098,7 +1262,7 @@ export interface components {
             idPedido?: number;
             items?: components["schemas"]["LineaDespachoResponse"][];
             /** @enum {string} */
-            metodoPago?: "YAPE" | "PLIN" | "TARJETA" | "EFECTIVO";
+            metodoPago?: "YAPE" | "PLIN" | "TARJETA" | "EFECTIVO" | "OTRO";
             /** @description true cuando el código del recibo ya se verificó (habilita entregar) */
             reciboVerificado?: boolean;
             /** @example 10.5 */
@@ -1435,7 +1599,7 @@ export interface components {
             /** Format: int32 */
             idPago?: number;
             /** @enum {string} */
-            metodoPago?: "YAPE" | "PLIN" | "TARJETA" | "EFECTIVO";
+            metodoPago?: "YAPE" | "PLIN" | "TARJETA" | "EFECTIVO" | "OTRO";
             /** @example 10 */
             monto?: number;
         };
@@ -1799,6 +1963,172 @@ export interface operations {
             };
             /** @description El rol no tiene acceso (ACCESO_DENEGADO) */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Error inesperado (ERROR_INTERNO) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+        };
+    };
+    estado: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstadoConexionResponse"];
+                };
+            };
+            /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Sin token o token inválido (NO_AUTENTICADO) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description El rol no tiene acceso (ACCESO_DENEGADO) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Error inesperado (ERROR_INTERNO) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+        };
+    };
+    desconectar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Sin token o token inválido (NO_AUTENTICADO) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description El rol no tiene acceso (ACCESO_DENEGADO) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Error inesperado (ERROR_INTERNO) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+        };
+    };
+    conectar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Sin token o token inválido (NO_AUTENTICADO) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description El rol no tiene acceso (ACCESO_DENEGADO) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description La API cobra con la pasarela simulada (REGLA_NEGOCIO) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2611,6 +2941,187 @@ export interface operations {
             };
         };
     };
+    retornoOauth: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Sin token o token inválido (NO_AUTENTICADO) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description El rol no tiene acceso (ACCESO_DENEGADO) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Error inesperado (ERROR_INTERNO) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+        };
+    };
+    retornoPago: {
+        parameters: {
+            query: {
+                pedido: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Sin token o token inválido (NO_AUTENTICADO) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description El rol no tiene acceso (ACCESO_DENEGADO) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Error inesperado (ERROR_INTERNO) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+        };
+    };
+    webhook: {
+        parameters: {
+            query?: {
+                cafeteria?: number;
+                "data.id"?: string;
+                type?: string;
+            };
+            header?: {
+                "x-signature"?: string;
+                "x-request-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Sin token o token inválido (NO_AUTENTICADO) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description El rol no tiene acceso (ACCESO_DENEGADO) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Error inesperado (ERROR_INTERNO) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+        };
+    };
     crear_1: {
         parameters: {
             query?: never;
@@ -2935,9 +3446,76 @@ export interface operations {
             };
             /**
              * @description Otro estudiante compró las últimas unidades (STOCK_INSUFICIENTE) o el pedido ya está pagado o
-             *     cancelado (REGLA_NEGOCIO)
+             *     cancelado (REGLA_NEGOCIO), o el cafetín aún no conectó Mercado Pago (REGLA_NEGOCIO)
              */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Error inesperado (ERROR_INTERNO) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+        };
+    };
+    verificarPago: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PedidoResponse"];
+                };
+            };
+            /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description Sin token o token inválido (NO_AUTENTICADO) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description El rol no tiene acceso (ACCESO_DENEGADO) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorRespuesta"];
+                };
+            };
+            /** @description No existe o no te pertenece (NO_ENCONTRADO) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
