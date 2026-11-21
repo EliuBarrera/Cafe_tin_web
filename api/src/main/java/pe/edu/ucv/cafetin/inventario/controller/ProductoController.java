@@ -73,6 +73,7 @@ public class ProductoController {
 	@Operation(summary = "Editar producto", description = "DUENO · RF-19. Cambiar el precio no afecta pedidos anteriores (precio histórico).")
 	@ApiResponse(responseCode = "409", description = "Ya existe un producto con ese nombre (CONFLICTO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public ProductoResponse actualizar(@PathVariable Integer id, @Valid @RequestBody ProductoActualizarRequest solicitud) {
 		return servicio.actualizar(usuarioActual.cafeteria(), id, solicitud);
 	}

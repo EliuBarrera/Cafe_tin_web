@@ -136,6 +136,12 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
         required: true
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -386,6 +392,12 @@ paths:
         panel con ?mercadopago=conectado o ?mercadopago=error. El enlace vale 10 minutos.
       operationId: conectar
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlAutorizacionResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -754,6 +766,12 @@ paths:
           type: integer
           format: int32
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoDespachoResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -806,6 +824,12 @@ paths:
           type: integer
           format: int32
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoDespachoResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -859,6 +883,12 @@ paths:
           type: integer
           format: int32
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoDespachoResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -910,6 +940,12 @@ paths:
           type: integer
           format: int32
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoDespachoResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -968,6 +1004,12 @@ paths:
               $ref: "#/components/schemas/VerificarReciboRequest"
         required: true
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoDespachoResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -1404,6 +1446,12 @@ paths:
           type: integer
           format: int32
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -1466,6 +1514,12 @@ paths:
               $ref: "#/components/schemas/PagarRequest"
         required: true
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedidoResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -1733,6 +1787,12 @@ paths:
               $ref: "#/components/schemas/ProductoActualizarRequest"
         required: true
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductoResponse"
+          description: OK
         "400":
           content:
             application/json:
@@ -3490,6 +3550,13 @@ components:
           - MANANA
           - TARDE
           - NOCHE
+    UrlAutorizacionResponse:
+      type: object
+      description: Página de Mercado Pago donde el dueño autoriza al cafetín a cobrar
+      properties:
+        urlAutorizacion:
+          type: string
+          example: https://auth.mercadopago.com/authorization?client_id=…&state=…
     UsuarioResponse:
       type: object
       description: Usuario autenticado

@@ -47,6 +47,7 @@ public class CobrosController {
 			panel con ?mercadopago=conectado o ?mercadopago=error. El enlace vale 10 minutos.""")
 	@ApiResponse(responseCode = "409", description = "La API cobra con la pasarela simulada (REGLA_NEGOCIO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public UrlAutorizacionResponse conectar() {
 		return servicio.iniciar(usuario.cafeteria());
 	}

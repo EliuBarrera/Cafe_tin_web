@@ -71,6 +71,7 @@ public class PedidoController {
 			Otro estudiante compró las últimas unidades (STOCK_INSUFICIENTE) o el pedido ya está pagado o
 			cancelado (REGLA_NEGOCIO), o el cafetín aún no conectó Mercado Pago (REGLA_NEGOCIO)""",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public PedidoResponse pagar(@PathVariable Integer id, @Valid @RequestBody PagarRequest solicitud) {
 		return servicio.pagar(usuario.id(), id, solicitud.metodoPago());
 	}
@@ -92,6 +93,7 @@ public class PedidoController {
 			no se cancela desde la app.""")
 	@ApiResponse(responseCode = "409", description = "El pedido ya está pagado o no está PENDIENTE (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public PedidoResponse cancelar(@PathVariable Integer id) {
 		return servicio.cancelar(usuario.id(), id);
 	}
