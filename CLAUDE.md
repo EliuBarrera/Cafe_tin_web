@@ -206,6 +206,7 @@ Anota aquí cada decisión cuando se cierre (fecha · decisión · motivo).
 - 19/11/2026 · Aplicación de Mercado Pago de prueba en **Colombia** (`GestionCafetin`, App ID 2512482686914298), moneda `COP` por configuración · el equipo no tiene cuenta de Mercado Pago Perú; para cobrar en Perú solo se cambian credenciales y `CAFETIN_PAGOS_MONEDA=PEN`, sin código.
 - 19/11/2026 · Con Mercado Pago, si al confirmar un pago aprobado ya no hay stock (o el pedido se canceló) se reembolsa automáticamente: única excepción a "sin reembolsos en la v1" · con Checkout Pro el cobro ocurre antes de saber si queda stock.
 - 19/11/2026 · Contrato de pago aditivo: `POST /pago` sigue pidiendo `metodoPago` (provisional con Mercado Pago; se guarda el que informa MP) y suma `pago.urlPago` y `/pago/verificar` · la app y el panel siguen funcionando con la pasarela simulada mientras se adaptan.
+- 21/11/2026 · Pruebas de Mercado Pago con la app espejo de la cuenta de prueba (`5194962408562556`) en `MP_CLIENT_*`, otro vendedor de prueba como cafetín y el comprador de prueba; GestionCafetin solo para cobro real · con una aplicación de cuenta real y cafetines de prueba, Checkout Pro falla al pagar. Detalle en `docs/mercadopago.md`.
 
 ## Qué no hacer
 
