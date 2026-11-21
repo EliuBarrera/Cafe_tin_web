@@ -1567,6 +1567,11 @@ export interface components {
             /** @enum {string} */
             turno?: "MANANA" | "TARDE" | "NOCHE";
         };
+        /** @description Página de Mercado Pago donde el dueño autoriza al cafetín a cobrar */
+        UrlAutorizacionResponse: {
+            /** @example https://auth.mercadopago.com/authorization?client_id=…&state=… */
+            urlAutorizacion?: string;
+        };
         /** @description Usuario autenticado */
         UsuarioResponse: {
             /** @example Barrera Martínez */
@@ -1756,6 +1761,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
@@ -2100,6 +2114,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UrlAutorizacionResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
@@ -2542,6 +2565,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PedidoDespachoResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
@@ -2609,6 +2641,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PedidoDespachoResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
@@ -2676,6 +2717,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PedidoDespachoResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
@@ -2743,6 +2793,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PedidoDespachoResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
@@ -2814,6 +2873,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PedidoDespachoResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
@@ -3328,6 +3396,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PedidoResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
@@ -3399,6 +3476,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PedidoResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
@@ -3744,6 +3830,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductoResponse"];
+                };
+            };
             /** @description Datos inválidos (VALIDACION, CUERPO_INVALIDO, PARAMETRO_INVALIDO) */
             400: {
                 headers: {
