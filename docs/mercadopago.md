@@ -8,7 +8,9 @@ el dinero llega al cafetín y la plataforma puede quedarse una comisión). Mient
 > Mercado Pago **Colombia (MCO)**, porque la cuenta de Mercado Pago del equipo es colombiana. Por eso
 > `CAFETIN_PAGOS_MONEDA=COP` y en el checkout no aparece Yape. Para cobrar en Perú, alguien con cuenta de
 > Mercado Pago Perú crea otra aplicación y se cambian `MP_CLIENT_ID`, `MP_CLIENT_SECRET`,
-> `MP_WEBHOOK_SECRET` y la moneda a `PEN`. No hay que tocar código.
+> `MP_WEBHOOK_SECRET` y la moneda a `PEN`. No hay que tocar código. Las pruebas de Perú también necesitan
+> esa cuenta: no se pueden armar desde la cuenta colombiana (ver *Problemas conocidos*). Pendiente: el
+> equipo creará una cuenta de Mercado Pago Perú.
 
 ## 1. La aplicación de Mercado Pago (una sola, la de la plataforma)
 
@@ -107,3 +109,5 @@ con `/pago/verificar` al volver.
 | Solo aparece *Dinero disponible* o el pago falla con montos pequeños | Mercado Pago Colombia cobra desde **$ 1.000 COP**, y la API manda el total en soles con moneda `COP` (S/ 11 → $ 11) | Para probar, sube el precio de un producto desde el panel. Con `PEN` en Perú no pasa |
 | Checkout Pro no carga o falla en Brave | Brave Shields bloquea los scripts antifraude de Mercado Pago | Desactiva Shields para `mercadopago.com.co` o usa Chrome |
 | La app muestra *"Parámetro con formato incorrecto o faltante"* en el catálogo | APK anterior a varios cafetines (`app-v0.1.0`), que pide el catálogo sin `?cafeteria=` | Instala un APK compilado desde `main` |
+| Checkout Pro: *"No se puede continuar con este pago. La cuenta del vendedor es de otro país"* | La aplicación del marketplace es de un país y el cafetín o el comprador de otro (probado: app espejo de Colombia con vendedor y comprador de Perú). El OAuth conecta igual, falla al pagar | Aplicación, cafetín y comprador del **mismo país** |
+| Una aplicación creada dentro de una cuenta de prueba no muestra *Client Secret* ni *Redirect URL* | El panel de las cuentas de prueba es simplificado: solo da *Public Key* y *Access Token*, que no sirven para OAuth | La aplicación del marketplace se crea en una cuenta real (o es la app espejo que Mercado Pago crea sola) |
