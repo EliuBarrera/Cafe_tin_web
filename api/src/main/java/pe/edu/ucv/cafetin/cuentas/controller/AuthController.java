@@ -51,6 +51,7 @@ public class AuthController {
 	@Operation(summary = "Iniciar sesión", description = "Público · RF-01, RF-02. Sirve para los tres roles.")
 	@ApiResponse(responseCode = "401", description = "Correo o contraseña incorrectos (NO_AUTENTICADO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public TokenResponse login(@Valid @RequestBody LoginRequest solicitud) {
 		return auth.login(solicitud);
 	}

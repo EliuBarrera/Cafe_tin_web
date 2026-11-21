@@ -2,12 +2,14 @@ package pe.edu.ucv.cafetin.despacho.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,6 +58,7 @@ public class DespachoController {
 	@Operation(summary = "Confirmar pedido", description = "TRABAJADOR, DUENO · RF-11. PENDIENTE → CONFIRMADO y asigna al usuario autenticado. Notifica al estudiante.")
 	@ApiResponse(responseCode = "409", description = "Transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public PedidoDespachoResponse confirmar(@PathVariable Integer id) {
 		return servicio.confirmar(usuario.cafeteria(), usuario.id(), id);
 	}
@@ -64,6 +67,7 @@ public class DespachoController {
 	@Operation(summary = "Empezar a preparar", description = "TRABAJADOR, DUENO · RF-11. CONFIRMADO → EN_PREPARACION.")
 	@ApiResponse(responseCode = "409", description = "Transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public PedidoDespachoResponse preparar(@PathVariable Integer id) {
 		return servicio.preparar(usuario.cafeteria(), id);
 	}
@@ -72,6 +76,7 @@ public class DespachoController {
 	@Operation(summary = "Marcar listo para recoger", description = "TRABAJADOR, DUENO · RF-12. EN_PREPARACION → LISTO. Notifica al estudiante (M4).")
 	@ApiResponse(responseCode = "409", description = "Transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public PedidoDespachoResponse listo(@PathVariable Integer id) {
 		return servicio.listo(usuario.cafeteria(), id);
 	}
@@ -80,6 +85,7 @@ public class DespachoController {
 	@Operation(summary = "Verificar recibo", description = "TRABAJADOR, DUENO · RF-13. Compara el código que muestra el estudiante con el del recibo; el pedido debe estar LISTO.")
 	@ApiResponse(responseCode = "409", description = "El código no coincide o el pedido no está LISTO (REGLA_NEGOCIO)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public PedidoDespachoResponse verificar(@PathVariable Integer id, @Valid @RequestBody VerificarReciboRequest solicitud) {
 		return servicio.verificar(usuario.cafeteria(), id, solicitud.codigoVerificacion());
 	}
@@ -88,6 +94,7 @@ public class DespachoController {
 	@Operation(summary = "Entregar pedido", description = "TRABAJADOR, DUENO · RF-14. LISTO → ENTREGADO; exige el recibo verificado. Notifica al estudiante.")
 	@ApiResponse(responseCode = "409", description = "Recibo sin verificar (REGLA_NEGOCIO) o transición no permitida (TRANSICION_INVALIDA)",
 			content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ResponseStatus(HttpStatus.OK)
 	public PedidoDespachoResponse entregar(@PathVariable Integer id) {
 		return servicio.entregar(usuario.cafeteria(), id);
 	}
