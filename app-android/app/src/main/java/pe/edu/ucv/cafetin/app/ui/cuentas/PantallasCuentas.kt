@@ -1,7 +1,5 @@
 package pe.edu.ucv.cafetin.app.ui.cuentas
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -10,24 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pe.edu.ucv.cafetin.app.datos.Sesion
-
-@Composable
-fun PantallaLogin(vm: LoginViewModel, alEntrar: (Sesion) -> Unit, alRegistrarse: () -> Unit, alRecuperar: () -> Unit) {
-    val e by vm.estado.collectAsStateWithLifecycle()
-    LaunchedEffect(e.sesion) { e.sesion?.let(alEntrar) }
-
-    MarcoCuenta("Iniciar sesión") {
-        CampoTexto("Correo", e.correo, vm::cambiarCorreo, e.errorCorreo, KeyboardType.Email)
-        CampoTexto("Contraseña", e.contrasena, vm::cambiarContrasena, e.errorContrasena, KeyboardType.Password, secreto = true, ultimo = true)
-        MensajeError(e.error)
-        BotonPrincipal(if (e.cargando) "Entrando…" else "Entrar", e.cargando, vm::entrar)
-        TextButton(onClick = alRecuperar) { Text("¿Olvidaste tu contraseña?") }
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text("¿Primera vez?", style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = alRegistrarse) { Text("Crea tu cuenta") }
-        }
-    }
-}
 
 @Composable
 fun PantallaRegistro(vm: RegistroViewModel, alEntrar: (Sesion) -> Unit, alVolver: () -> Unit) {

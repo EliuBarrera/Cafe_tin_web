@@ -1,5 +1,18 @@
 package pe.edu.ucv.cafetin.app.ui.pedidos
 
+import pe.edu.ucv.cafetin.app.ui.topografia
+import pe.edu.ucv.cafetin.app.ui.lineaRuta
+import pe.edu.ucv.cafetin.app.ui.TextoBoton
+import pe.edu.ucv.cafetin.app.ui.Script
+import pe.edu.ucv.cafetin.app.ui.Paleta
+import pe.edu.ucv.cafetin.app.ui.LogoCafetin
+import pe.edu.ucv.cafetin.app.ui.BotonAmarillo
+import pe.edu.ucv.cafetin.app.ui.BordeDentado
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -23,7 +36,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,7 +61,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -61,6 +72,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pe.edu.ucv.cafetin.app.datos.Cafeteria
 import pe.edu.ucv.cafetin.app.datos.ProductoCatalogo
 import pe.edu.ucv.cafetin.app.ui.Acentos
+import pe.edu.ucv.cafetin.app.ui.TituloPantalla
 import pe.edu.ucv.cafetin.app.ui.cuentas.BotonPrincipal
 import pe.edu.ucv.cafetin.app.ui.cuentas.MensajeError
 import pe.edu.ucv.cafetin.app.ui.estiloPrecio
@@ -154,8 +166,8 @@ fun PantallaCatalogo(vm: CatalogoViewModel, nombre: String, alCerrarSesion: () -
             if (lineas.isNotEmpty()) {
                 val unidades = lineas.sumOf { it.cantidad }
                 BarraAccion {
-                    Button(onClick = alVerCarrito, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                        Text("Ver carrito · $unidades", Modifier.weight(1f))
+                    BotonAmarillo(alVerCarrito, Modifier.fillMaxWidth()) {
+                        TextoBoton("Ver carrito · $unidades", Modifier.weight(1f))
                         Text(solesDeCentimos(lineas.sumOf { it.subtotalCentimos }), style = estiloPrecio)
                     }
                 }
@@ -173,41 +185,55 @@ fun PantallaCatalogo(vm: CatalogoViewModel, nombre: String, alCerrarSesion: () -
 private fun Cabecera(nombre: String, cafeteria: Cafeteria?, alCerrarSesion: () -> Unit, alCambiar: (() -> Unit)? = null) {
     val ahora = remember { LocalTime.now() }
     val primeraHora = remember { horasDeRecojo(ahora).firstOrNull() }
-    val degradado = Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))
+    // Cartel naranja con curvas de nivel y la línea de ruta, como la portada del panel; abajo, dientes de recibo.
     Column(
         Modifier.fillMaxWidth()
-            .background(degradado, RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-            .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 24.dp),
+            .clip(BordeDentado(16.dp))
+            .background(Paleta.naranja)
+            .topografia(Paleta.enColor.copy(alpha = 0.14f))
+            .lineaRuta(Paleta.amarillo)
+            .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 32.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("CAFETÍN UCV", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.weight(1f))
-            TextButton(onClick = alCerrarSesion) { Text("Salir", color = Color.White) }
+            LogoCafetin(40.dp)
+            Spacer(Modifier.width(8.dp))
+            Text("CAFETÍN UCV", style = MaterialTheme.typography.labelMedium, color = Paleta.enColor, modifier = Modifier.weight(1f))
+            TextButton(onClick = alCerrarSesion, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text("SALIR", color = Paleta.enColor, style = MaterialTheme.typography.labelLarge)
+            }
         }
+        Spacer(Modifier.height(12.dp))
+        TituloPantalla("${saludo(ahora)}, $nombre", color = Paleta.enColor)
         Text(
-            "${saludo(ahora)}, $nombre",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
-            modifier = Modifier.semantics { heading() },
+            "sin hacer fila",
+            fontFamily = Script,
+            fontSize = 32.sp,
+            color = Paleta.amarillo,
+            modifier = Modifier.rotate(-4f).padding(top = 2.dp, bottom = 6.dp),
         )
-        Spacer(Modifier.height(4.dp))
         Text(
-            if (primeraHora != null) "Pide ahora y recoge desde las %02d:%02d, sin hacer fila.".format(primeraHora.hour, primeraHora.minute)
+            if (primeraHora != null) "Pide ahora y recoge desde las %02d:%02d.".format(primeraHora.hour, primeraHora.minute)
             else "Por hoy ya no hay horarios de recojo. Puedes ver el catálogo.",
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.White.copy(alpha = 0.9f),
+            fontWeight = FontWeight.SemiBold,
+            color = Paleta.enColor,
             modifier = Modifier.padding(end = 12.dp),
         )
         if (cafeteria != null && alCambiar != null) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "Recoges en ${cafeteria.nombre}",
                     style = MaterialTheme.typography.titleSmall,
-                    color = Color.White,
+                    color = Paleta.enColor,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = alCambiar, modifier = Modifier.semantics { contentDescription = "Cambiar de cafetín" }) {
-                    Text("Cambiar", color = Color.White)
+                OutlinedButton(
+                    onClick = alCambiar,
+                    border = BorderStroke(1.5.dp, Paleta.enColor),
+                    modifier = Modifier.padding(end = 12.dp).heightIn(min = 40.dp).semantics { contentDescription = "Cambiar de cafetín" },
+                ) {
+                    Text("CAMBIAR", color = Paleta.enColor, style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
@@ -286,11 +312,22 @@ private fun ChipCategoria(texto: String, elegida: Boolean, alPulsar: () -> Unit)
     FilterChip(
         selected = elegida,
         onClick = alPulsar,
-        label = { Text(texto) },
+        label = { Text(texto, style = MaterialTheme.typography.labelLarge) },
         modifier = Modifier.heightIn(min = 40.dp),
+        shape = CircleShape,
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primary,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            containerColor = MaterialTheme.colorScheme.surface,
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            selectedContainerColor = Paleta.amarillo,
+            selectedLabelColor = Paleta.tierra,
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = elegida,
+            borderColor = MaterialTheme.colorScheme.outline,
+            selectedBorderColor = Paleta.tierra,
+            borderWidth = 1.dp,
+            selectedBorderWidth = 1.5.dp,
         ),
     )
 }
@@ -354,7 +391,7 @@ fun PantallaCarrito(vm: CarritoViewModel, alCrear: (Int) -> Unit, alVolverAlCata
 
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { Text("Tu pedido", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() }) }
+            item { TituloPantalla("Tu pedido") }
             items(lineas, key = { it.producto.idProducto }) { linea ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AvatarProducto(linea.producto.nombre, linea.producto.categoria, 44.dp)

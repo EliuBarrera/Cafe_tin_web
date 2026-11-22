@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo crema mientras arranca Compose: evita el destello blanco al abrir la app. -->
+    <style name="Tema.Cafetin" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/icono_fondo</item>
+    </style>
+</resources>

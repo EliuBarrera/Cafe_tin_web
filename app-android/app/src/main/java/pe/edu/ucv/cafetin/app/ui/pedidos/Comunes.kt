@@ -1,5 +1,13 @@
 package pe.edu.ucv.cafetin.app.ui.pedidos
 
+import pe.edu.ucv.cafetin.app.ui.Paleta
+import pe.edu.ucv.cafetin.app.ui.LogoCafetin
+import pe.edu.ucv.cafetin.app.ui.BordeDentado
+import pe.edu.ucv.cafetin.app.ui.ArchivoExpandida
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.draw.shadow
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.border
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -98,10 +106,7 @@ fun Vacio(titulo: String, detalle: String? = null, accion: (@Composable () -> Un
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            Modifier.size(72.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) { Text("☕", fontSize = 32.sp) }
+        LogoCafetin(112.dp)
         Text(titulo, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
         detalle?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) }
         accion?.invoke()
@@ -112,8 +117,9 @@ fun Vacio(titulo: String, detalle: String? = null, accion: (@Composable () -> Un
 @Composable
 fun fondoCrema(): Color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else Acentos.crema
 
+// Tonos claros de la paleta del panel (amarillo, naranja, verde, crema): con texto tierra pasan 4,5:1.
 private val TONOS_CATEGORIA = listOf(
-    Color(0xFFF3E1CE), Color(0xFFEAD7C3), Color(0xFFF6E7D2), Color(0xFFE6D3BE), Color(0xFFF1DCC6),
+    Color(0xFFF7D348), Color(0xFFF2C4A6), Color(0xFFC9E0DC), Color(0xFFFCEFC0), Color(0xFFEBD9B4),
 )
 
 /**
@@ -132,8 +138,9 @@ fun AvatarProducto(nombre: String, categoria: String?, tamano: Dp = 56.dp) {
         Text(
             nombre.trim().take(1).uppercase(),
             fontSize = (tamano.value * 0.42f).sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.primary,
+            fontFamily = ArchivoExpandida,
+            fontWeight = FontWeight.Black,
+            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Paleta.tierra,
         )
     }
 }
@@ -204,9 +211,9 @@ fun SeguimientoPedido(paso: Int) {
                 // Paso actual más grande y con anillo; los ya hechos, llenos. El nombre en negrita dice cuál es.
                 Box(
                     Modifier.size(if (i == paso) 24.dp else 14.dp).clip(CircleShape)
-                        .background(if (i == paso) Acentos.caramelo.copy(alpha = 0.3f) else if (hecho) activo else inactivo),
-                    contentAlignment = Alignment.Center,
-                ) { if (i == paso) Box(Modifier.size(14.dp).clip(CircleShape).background(Acentos.caramelo)) }
+                        .background(if (i == paso) Paleta.amarillo else if (hecho) activo else inactivo)
+                        .then(if (i == paso) Modifier.border(2.dp, Paleta.tierra, CircleShape) else Modifier),
+                )
                 if (i < PASOS_PEDIDO.lastIndex) {
                     Box(Modifier.weight(1f).height(3.dp).background(if (i < paso) activo else inactivo))
                 }
@@ -228,38 +235,56 @@ fun SeguimientoPedido(paso: Int) {
     }
 }
 
-/** Recibo con forma de ticket: el código es lo que el estudiante muestra al recoger (RF-07, RF-13). */
+/**
+ * Recibo con forma de ticket, como el menú del panel: papel con dientes abajo, letra de caja registradora
+ * y código de barras decorativo. El código es lo que el estudiante muestra al recoger (RF-07, RF-13).
+ */
 @Composable
 fun TicketRecibo(codigo: String, mensaje: String) {
-    val fondo = fondoCrema()
+    val papel = MaterialTheme.colorScheme.surface
+    val tinta = MaterialTheme.colorScheme.onSurface
     val linea = MaterialTheme.colorScheme.outline
-    val muesca = MaterialTheme.colorScheme.background
-    Box(Modifier.fillMaxWidth()) {
-        Column(
-            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(fondo).padding(vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text("RECIBO DIGITAL", style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                codigo,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.sp,
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.semantics { contentDescription = "Código de recibo ${codigo.toList().joinToString(" ")}" },
-            )
-            Spacer(Modifier.height(14.dp))
-            Canvas(Modifier.fillMaxWidth().height(1.dp).padding(horizontal = 20.dp)) {
-                drawLine(linea, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f)))
-            }
-            Spacer(Modifier.height(14.dp))
-            Text(mensaje, Modifier.padding(horizontal = 24.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
+    Column(
+        Modifier.fillMaxWidth()
+            .shadow(6.dp, BordeDentado(14.dp), ambientColor = Paleta.tierra, spotColor = Paleta.tierra)
+            .clip(BordeDentado(14.dp))
+            .background(papel)
+            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("RECIBO DIGITAL", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 3.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            codigo,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.sp,
+            fontFamily = FontFamily.Monospace,
+            color = tinta,
+            modifier = Modifier.semantics { contentDescription = "Código de recibo ${codigo.toList().joinToString(" ")}" },
+        )
+        Spacer(Modifier.height(14.dp))
+        Canvas(Modifier.fillMaxWidth().height(2.dp)) {
+            drawLine(linea, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
         }
-        // Muescas laterales a la altura de la línea punteada.
-        Box(Modifier.align(Alignment.CenterStart).padding(top = 56.dp).offset(x = (-9).dp).size(18.dp).clip(CircleShape).background(muesca))
-        Box(Modifier.align(Alignment.CenterEnd).padding(top = 56.dp).offset(x = 9.dp).size(18.dp).clip(CircleShape).background(muesca))
+        Spacer(Modifier.height(14.dp))
+        Text(mensaje, textAlign = TextAlign.Center, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium, color = tinta)
+        Spacer(Modifier.height(16.dp))
+        CodigoBarras(tinta, Modifier.fillMaxWidth(0.8f).height(40.dp))
     }
 }
 
+/** Barras de anchos variados derivadas del propio dibujo (no codifican nada). Decorativo. */
+@Composable
+private fun CodigoBarras(color: Color, modifier: Modifier) {
+    val anchos = remember { listOf(2, 1, 3, 1, 1, 2, 1, 3, 2, 1, 1, 3, 1, 2, 2, 1, 3, 1, 1, 2) }
+    Canvas(modifier.clearAndSetSemantics { }) {
+        val unidad = size.width / (anchos.sum() * 2f)
+        var x = 0f
+        anchos.forEachIndexed { i, a ->
+            val ancho = a * unidad
+            if (i % 2 == 0) drawRect(color, Offset(x, 0f), androidx.compose.ui.geometry.Size(ancho * 1.4f, size.height))
+            x += ancho * 2f
+        }
+    }
+}
