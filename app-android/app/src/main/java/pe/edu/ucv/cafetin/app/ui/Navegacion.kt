@@ -1,5 +1,13 @@
 package pe.edu.ucv.cafetin.app.ui
 
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -104,7 +112,13 @@ fun AppCafetin(
         revisando = false
     }
     if (revisando) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                LogoCafetin(120.dp)
+                Spacer(Modifier.height(16.dp))
+                CircularProgressIndicator(color = Paleta.naranja)
+            }
+        }
         return
     }
 
@@ -232,15 +246,27 @@ fun AppCafetin(
 
 @Composable
 private fun BarraPestanas(nav: NavHostController, rutaActual: String?, unidadesCarrito: Int) {
-    NavigationBar {
+    // Barra de papel con una línea tierra arriba y la pestaña actual en amarillo, como el menú del panel.
+    val linea = MaterialTheme.colorScheme.onSurface
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.drawBehind { drawLine(linea, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1.5.dp.toPx()) },
+    ) {
         PESTANAS.forEach { p ->
             NavigationBarItem(
                 selected = rutaActual == p.ruta,
                 onClick = { irAPestana(nav, p.ruta) },
-                label = { Text(p.titulo) },
+                label = { Text(p.titulo.uppercase(), style = MaterialTheme.typography.labelSmall) },
+                colors = NavigationBarItemDefaults.colors(
+                    indicatorColor = Paleta.amarillo,
+                    selectedIconColor = Paleta.tierra,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
                 icon = {
                     if (p.ruta == Rutas.CARRITO && unidadesCarrito > 0) {
-                        BadgedBox(badge = { Badge { Text("$unidadesCarrito") } }) { Icon(painterResource(p.icono), contentDescription = null) }
+                        BadgedBox(badge = { Badge(containerColor = Paleta.naranja, contentColor = Paleta.enColor) { Text("$unidadesCarrito") } }) { Icon(painterResource(p.icono), contentDescription = null) }
                     } else {
                         Icon(painterResource(p.icono), contentDescription = null)
                     }

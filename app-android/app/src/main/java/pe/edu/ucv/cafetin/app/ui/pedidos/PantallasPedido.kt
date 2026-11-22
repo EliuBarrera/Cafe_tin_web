@@ -64,6 +64,7 @@ import pe.edu.ucv.cafetin.app.datos.Notificacion
 import pe.edu.ucv.cafetin.app.datos.PedidoResponse
 import pe.edu.ucv.cafetin.app.datos.PedidoResumen
 import pe.edu.ucv.cafetin.app.ui.Acentos
+import pe.edu.ucv.cafetin.app.ui.TituloPantalla
 import pe.edu.ucv.cafetin.app.ui.cuentas.BotonPrincipal
 import pe.edu.ucv.cafetin.app.ui.cuentas.MensajeError
 import pe.edu.ucv.cafetin.app.ui.estiloPrecio
@@ -111,7 +112,7 @@ fun PantallaPago(vm: PagoViewModel, alPagar: (Int) -> Unit) {
         else -> Column(Modifier.fillMaxSize()) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 item {
-                    Text("Pagar pedido", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+                    TituloPantalla("Pagar pedido")
                     Text("${pedido.codigoPedido} · recojo a las ${pedido.horaRecojo ?: "—"}${pedido.cafeteria?.let { " en ${it.nombre}" }.orEmpty()}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 item { DetalleLineas(pedido) }
@@ -218,7 +219,7 @@ fun PantallaPedido(vm: PedidoViewModel, alPagar: (Int) -> Unit) {
         else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(pedido.codigoPedido, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f).semantics { heading() })
+                    TituloPantalla(pedido.codigoPedido, Modifier.weight(1f))
                     EtiquetaEstado(pedido.estado, pedido.pago?.estado)
                 }
                 Text("Recojo a las ${pedido.horaRecojo ?: "—"}${pedido.cafeteria?.let { " en ${it.nombre}" }.orEmpty()} · pedido el ${fechaCorta(pedido.fechaHora)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -346,7 +347,7 @@ fun PantallaHistorial(vm: HistorialViewModel, alAbrir: (Int) -> Unit, alIrAlCarr
                 OutlinedButton(onClick = alVerCatalogo, modifier = Modifier.heightIn(min = 48.dp)) { Text("Ver el catálogo") }
             }
             else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { Text("Mis pedidos", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() }) }
+                item { TituloPantalla("Mis pedidos") }
                 items(estado.pedidos, key = { it.id }) { p ->
                     FilaPedido(p, repitiendo = estado.repitiendo == p.id, alPulsar = { alAbrir(p.id) }, alRepetir = { vm.volverAPedir(p.id) })
                 }
@@ -410,7 +411,7 @@ fun PantallaAvisos(vm: AvisosViewModel, alAbrirPedido: (Int) -> Unit) {
         estado.error != null -> ErrorConReintento(estado.error!!, vm::cargar)
         estado.avisos.isEmpty() -> Vacio("Sin avisos por ahora", "Te avisaremos aquí cuando tu pedido cambie de estado.")
         else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item { Text("Avisos", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() }) }
+            item { TituloPantalla("Avisos") }
             items(estado.avisos, key = { it.id }) { a ->
                 FilaAviso(a) {
                     vm.abrir(a)

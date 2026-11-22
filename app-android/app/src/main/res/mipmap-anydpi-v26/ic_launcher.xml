@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícono de la app: el bebé con la taza de Café & Tin sobre papel crema (minSdk 26: solo adaptativo). -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/icono_fondo" />
+    <foreground android:drawable="@drawable/ic_launcher_frente" />
+</adaptive-icon>
