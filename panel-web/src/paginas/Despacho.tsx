@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useState } from 'react'
+import { useSearchParams } from 'react-router'
 
 import { api, ErrorApi } from '../api/cliente'
 import type { EstadoPedido, PedidoDespacho } from '../api/tipos'
@@ -25,6 +26,30 @@ const SIGUIENTE: Partial<Record<EstadoPedido, { ruta: string; texto: string }>> 
   EN_PREPARACION: { ruta: 'listo', texto: 'Marcar listo' },
 }
 
+/** Valor del filtro "Atiende" para los pedidos que nadie confirmó todavía (o que confirmó el dueño). */
+const SIN_ASIGNAR = '-'
+
+/** Minúsculas y sin tildes: "maria" encuentra a "María". */
+function normalizar(texto: string) {
+  return texto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+}
+
+interface Filtros {
+  texto: string
+  pago: string
+  atiende: string
+}
+
+function cumple(p: PedidoDespacho, f: Filtros) {
+  if (f.pago && p.metodoPago !== f.pago) return false
+  if (f.atiende && (p.trabajador ?? SIN_ASIGNAR) !== f.atiende) return false
+  if (!f.texto) return true
+  const buscado = normalizar(f.texto.trim())
+  return [p.codigoPedido, p.estudiante, ...p.items.map((l) => l.producto)].some((t) => normalizar(t).includes(buscado))
+}
+
+const unicos = (valores: string[]) => [...new Set(valores)].sort((a, b) => a.localeCompare(b, 'es'))
+
 interface Aviso {
   codigoPedido: string
   mensaje: string
@@ -43,7 +68,27 @@ export function Despacho() {
   // Un error de transición se muestra arriba: la tarjeta puede haber cambiado de columna al refrescar.
   const [aviso, setAviso] = useState<Aviso | null>(null)
 
-  const pedidos = consulta.data
+  // Filtros en la URL (?q=&pago=&atiende=): sobreviven a recargar la página y al polling.
+  const [parametros, setParametros] = useSearchParams()
+  const filtros: Filtros = {
+    texto: parametros.get('q') ?? '',
+    pago: parametros.get('pago') ?? '',
+    atiende: parametros.get('atiende') ?? '',
+  }
+  const hayFiltros = Boolean(filtros.texto || filtros.pago || filtros.atiende)
+  const cambiarFiltro = (clave: string, valor: string) =>
+    setParametros(
+      (actuales) => {
+        const nuevos = new URLSearchParams(actuales)
+        if (valor) nuevos.set(clave, valor)
+        else nuevos.delete(clave)
+        return nuevos
+      },
+      { replace: true },
+    )
+
+  const todos = consulta.data
+  const pedidos = todos?.filter((p) => cumple(p, filtros))
 
   return (
     <section>
@@ -79,6 +124,18 @@ export function Despacho() {
       ) : (
         <>
           {consulta.isError && <MensajeError error={consulta.error} />}
+          <BarraFiltros
+            filtros={filtros}
+            metodos={unicos((todos ?? []).map((p) => p.metodoPago))}
+            trabajadores={unicos((todos ?? []).flatMap((p) => (p.trabajador ? [p.trabajador] : [])))}
+            alCambiar={cambiarFiltro}
+            alLimpiar={() => setParametros(new URLSearchParams(), { replace: true })}
+          />
+          {hayFiltros && (
+            <p className="resultado-filtros texto-suave" role="status">
+              Mostrando {pedidos.length} de {todos?.length ?? 0} pedidos
+            </p>
+          )}
           <div className="tablero">
             {COLUMNAS.map((c) => (
               <Columna
@@ -86,6 +143,7 @@ export function Despacho() {
                 estado={c.estado}
                 titulo={c.titulo}
                 pedidos={pedidos.filter((p) => p.estado === c.estado)}
+                filtrado={hayFiltros}
                 alFallar={setAviso}
                 alAvanzar={() => setAviso(null)}
               />
@@ -97,16 +155,84 @@ export function Despacho() {
   )
 }
 
+function BarraFiltros({
+  filtros,
+  metodos,
+  trabajadores,
+  alCambiar,
+  alLimpiar,
+}: {
+  filtros: Filtros
+  metodos: string[]
+  trabajadores: string[]
+  alCambiar: (clave: string, valor: string) => void
+  alLimpiar: () => void
+}) {
+  const id = useId()
+  // Un valor elegido sigue en la lista aunque ya no quede ningún pedido con él
+  const opcionesPago = unicos([...metodos, ...(filtros.pago ? [filtros.pago] : [])])
+  const opcionesAtiende = unicos([
+    ...trabajadores,
+    ...(filtros.atiende && filtros.atiende !== SIN_ASIGNAR ? [filtros.atiende] : []),
+  ])
+
+  return (
+    <search role="search" className="filtros filtros-despacho" aria-label="Filtrar pedidos">
+      <label className="filtro-busqueda" htmlFor={`${id}-q`}>
+        Buscar
+        <input
+          id={`${id}-q`}
+          type="search"
+          value={filtros.texto}
+          onChange={(e) => alCambiar('q', e.target.value)}
+          placeholder="Código, estudiante o producto"
+          autoComplete="off"
+        />
+      </label>
+      <label htmlFor={`${id}-pago`}>
+        Pago
+        <select id={`${id}-pago`} value={filtros.pago} onChange={(e) => alCambiar('pago', e.target.value)}>
+          <option value="">Todos</option>
+          {opcionesPago.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label htmlFor={`${id}-atiende`}>
+        Atiende
+        <select id={`${id}-atiende`} value={filtros.atiende} onChange={(e) => alCambiar('atiende', e.target.value)}>
+          <option value="">Todos</option>
+          <option value={SIN_ASIGNAR}>Sin asignar</option>
+          {opcionesAtiende.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </label>
+      {(filtros.texto || filtros.pago || filtros.atiende) && (
+        <button type="button" className="boton-texto" onClick={alLimpiar}>
+          Limpiar filtros
+        </button>
+      )}
+    </search>
+  )
+}
+
 function Columna({
   estado,
   titulo,
   pedidos,
+  filtrado,
   alFallar,
   alAvanzar,
 }: {
   estado: EstadoPedido
   titulo: string
   pedidos: PedidoDespacho[]
+  filtrado: boolean
   alFallar: (aviso: Aviso) => void
   alAvanzar: () => void
 }) {
@@ -117,7 +243,7 @@ function Columna({
         {titulo} <span className="contador">{pedidos.length}</span>
       </h2>
       {pedidos.length === 0 ? (
-        <p className="texto-suave columna-vacia">Sin pedidos</p>
+        <p className="texto-suave columna-vacia">{filtrado ? 'Ninguno con estos filtros' : 'Sin pedidos'}</p>
       ) : (
         pedidos.map((p) => <Tarjeta key={p.idPedido} pedido={p} alFallar={alFallar} alAvanzar={alAvanzar} />)
       )}

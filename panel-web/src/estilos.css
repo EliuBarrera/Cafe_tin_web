@@ -949,6 +949,53 @@ a:focus-visible {
   width: 100%;
 }
 
+/* Filtros del despacho: búsqueda ancha y selects compactos en una fila que se parte en móvil */
+.filtros-despacho {
+  align-items: end;
+  gap: 0.75rem 1rem;
+  padding: 0.875rem 1rem;
+  background: rgba(251, 246, 234, 0.7);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+}
+
+.filtros-despacho label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.filtro-busqueda {
+  flex: 1 1 16rem;
+}
+
+.filtros-despacho input[type='search'] {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  background: #fff;
+  border: 1.5px solid var(--borde-campo);
+  border-radius: 12px;
+}
+
+.filtros-despacho input[type='search']:focus-visible {
+  outline: 3px solid var(--naranja);
+  outline-offset: 2px;
+}
+
+.filtros-despacho .boton-texto {
+  min-height: 2.5rem;
+}
+
+.resultado-filtros {
+  margin: -0.25rem 0 0.875rem;
+  font-size: 0.875rem;
+}
+
 .filtros select:focus-visible,
 .formulario select:focus-visible,
 .filtros input[type='date']:focus-visible {

@@ -241,3 +241,81 @@ describe('tablero de despacho', () => {
     expect(await tarjeta('PED-1')).toBeInTheDocument()
   })
 })
+
+describe('filtros del despacho', () => {
+  const pedidos = () => [
+    pedido({ idPedido: 1, estudiante: 'María Quiroz Vásquez', metodoPago: 'YAPE' }),
+    pedido({ idPedido: 2, estudiante: 'Luis Paredes', metodoPago: 'PLIN', items: [{ producto: 'Café pasado', cantidad: 1 }] }),
+    pedido({ idPedido: 3, estado: 'CONFIRMADO', estudiante: 'Ana Torres', metodoPago: 'TARJETA', trabajador: 'Carmen Díaz' }),
+  ]
+  const visibles = () => screen.queryAllByRole('article').map((a) => a.getAttribute('aria-label'))
+
+  it('busca por estudiante sin importar tildes ni mayúsculas', async () => {
+    apiFalsa({ pedidos: pedidos() })
+    abrirDespacho()
+    await tarjeta('PED-1')
+
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 'maria')
+
+    expect(visibles()).toEqual(['PED-1'])
+    expect(screen.getByRole('status')).toHaveTextContent('Mostrando 1 de 3 pedidos')
+    expect(within(columna('Confirmados')).getByText('Ninguno con estos filtros')).toBeInTheDocument()
+  })
+
+  it('busca por producto y por código', async () => {
+    apiFalsa({ pedidos: pedidos() })
+    abrirDespacho()
+    await tarjeta('PED-1')
+    const buscar = screen.getByRole('searchbox', { name: 'Buscar' })
+
+    await userEvent.type(buscar, 'cafe')
+    expect(visibles()).toEqual(['PED-2'])
+
+    await userEvent.clear(buscar)
+    await userEvent.type(buscar, 'ped-3')
+    expect(visibles()).toEqual(['PED-3'])
+  })
+
+  it('filtra por método de pago y por quien atiende', async () => {
+    apiFalsa({ pedidos: pedidos() })
+    abrirDespacho()
+    await tarjeta('PED-1')
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Pago' }), 'PLIN')
+    expect(visibles()).toEqual(['PED-2'])
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Pago' }), '')
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Atiende' }), 'Sin asignar')
+    expect(visibles()).toEqual(['PED-1', 'PED-2'])
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Atiende' }), 'Carmen Díaz')
+    expect(visibles()).toEqual(['PED-3'])
+  })
+
+  it('limpiar filtros vuelve a mostrar todos los pedidos', async () => {
+    apiFalsa({ pedidos: pedidos() })
+    abrirDespacho()
+    await tarjeta('PED-1')
+
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 'luis')
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+
+    expect(visibles()).toEqual(['PED-1', 'PED-2', 'PED-3'])
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('los filtros se mantienen cuando el tablero se refresca', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const estado = { pedidos: pedidos() }
+    apiFalsa(estado)
+    abrirDespacho()
+    await tarjeta('PED-1')
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Pago' }), 'YAPE')
+    estado.pedidos = [...pedidos(), pedido({ idPedido: 4, metodoPago: 'YAPE' }), pedido({ idPedido: 5, metodoPago: 'PLIN' })]
+    await act(() => vi.advanceTimersByTimeAsync(INTERVALO_REFRESCO_MS))
+
+    expect(await tarjeta('PED-4')).toBeInTheDocument()
+    expect(visibles()).toEqual(['PED-1', 'PED-4'])
+  })
+})
