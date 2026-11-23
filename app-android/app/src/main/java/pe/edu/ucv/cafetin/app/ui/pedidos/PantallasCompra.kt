@@ -272,7 +272,7 @@ private fun ElegirCafeteria(
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        AvatarProducto(c.nombre, c.nombre)
+                        AvatarProducto(c.nombre, c.nombre, conIcono = false)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(c.nombre, style = MaterialTheme.typography.titleMedium)
