@@ -1,6 +1,11 @@
 package pe.edu.ucv.cafetin.app.ui
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -18,9 +23,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ripple
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
@@ -260,69 +262,80 @@ fun AppCafetin(
 }
 
 /**
- * Barra de papel con una línea tierra arriba. La pestaña actual se marca con un punto naranja bajo el
- * nombre y el ícono en tierra; las demás quedan en tono suave. Cada pestaña ocupa al menos 64 dp de alto.
+ * Dock flotante: una cápsula tierra separada de los bordes, con sombra. La pestaña actual tiene el ícono
+ * en amarillo, un poco más grande, y un punto debajo (como las apps abiertas en un dock); las demás en crema
+ * suave. Solo íconos: el nombre va en la descripción para lectores de pantalla.
  */
 @Composable
 private fun BarraPestanas(nav: NavHostController, rutaActual: String?, unidadesCarrito: Int) {
-    val linea = MaterialTheme.colorScheme.onSurface
-    Row(
+    val oscuro = isSystemInDarkTheme()
+    Box(
         Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .drawBehind { drawLine(linea, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1.5.dp.toPx()) }
             .navigationBarsPadding()
-            .selectableGroup()
-            .padding(top = 8.dp, bottom = 6.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 12.dp),
     ) {
-        PESTANAS.forEach { p ->
-            Pestana(
-                pestana = p,
-                elegida = rutaActual == p.ruta,
-                insignia = if (p.ruta == Rutas.CARRITO && unidadesCarrito > 0) unidadesCarrito else null,
-                alPulsar = { irAPestana(nav, p.ruta) },
-                modifier = Modifier.weight(1f),
-            )
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .shadow(12.dp, RoundedCornerShape(28.dp), ambientColor = Paleta.tierra, spotColor = Paleta.tierra)
+                .clip(RoundedCornerShape(28.dp))
+                .background(if (oscuro) MaterialTheme.colorScheme.surfaceContainerHighest else Paleta.tierra)
+                .selectableGroup()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+        ) {
+            PESTANAS.forEach { p ->
+                Pestana(
+                    pestana = p,
+                    elegida = rutaActual == p.ruta,
+                    insignia = if (p.ruta == Rutas.CARRITO && unidadesCarrito > 0) unidadesCarrito else null,
+                    alPulsar = { irAPestana(nav, p.ruta) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun Pestana(pestana: Pestana, elegida: Boolean, insignia: Int?, alPulsar: () -> Unit, modifier: Modifier = Modifier) {
-    val oscuro = isSystemInDarkTheme()
-    val activo = if (oscuro) Paleta.amarillo else Paleta.tierra
-    val color by animateColorAsState(if (elegida) activo else MaterialTheme.colorScheme.onSurfaceVariant, label = "color")
-    val punto by animateFloatAsState(if (elegida) 1f else 0f, animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f), label = "punto")
+    val reposo = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant else Paleta.enColor.copy(alpha = 0.7f)
+    val color by animateColorAsState(if (elegida) Paleta.amarillo else reposo, label = "color")
+    val crecer = spring<Float>(dampingRatio = 0.5f, stiffness = 500f)
+    val escala by animateFloatAsState(if (elegida) 1.15f else 1f, animationSpec = crecer, label = "escala")
+    val punto by animateFloatAsState(if (elegida) 1f else 0f, animationSpec = crecer, label = "punto")
     Column(
         modifier
-            .heightIn(min = 64.dp)
+            .heightIn(min = 56.dp)
             .selectable(
                 selected = elegida,
                 onClick = alPulsar,
                 role = Role.Tab,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(bounded = false, radius = 36.dp),
-            ),
+                indication = ripple(bounded = false, radius = 28.dp, color = Paleta.amarillo),
+            )
+            .semantics { contentDescription = pestana.titulo },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterVertically),
     ) {
-        val icono = @Composable { Icon(painterResource(pestana.icono), contentDescription = null, tint = color, modifier = Modifier.size(24.dp)) }
+        val icono = @Composable {
+            Icon(
+                painterResource(pestana.icono),
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(26.dp).graphicsLayer { scaleX = escala; scaleY = escala },
+            )
+        }
         if (insignia != null) {
             BadgedBox(badge = { Badge(containerColor = Paleta.naranja, contentColor = Paleta.enColor) { Text("$insignia") } }) { icono() }
         } else {
             icono()
         }
-        Text(
-            pestana.titulo.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            fontWeight = if (elegida) FontWeight.Bold else FontWeight.Medium,
-        )
         Box(
             Modifier
-                .size(6.dp)
+                .size(5.dp)
                 .graphicsLayer { scaleX = punto; scaleY = punto; alpha = punto }
-                .background(if (oscuro) Paleta.amarillo else Paleta.naranja, CircleShape),
+                .background(Paleta.amarillo, CircleShape),
         )
     }
 }
