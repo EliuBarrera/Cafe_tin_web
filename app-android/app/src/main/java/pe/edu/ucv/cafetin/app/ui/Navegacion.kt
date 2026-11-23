@@ -1,9 +1,26 @@
 package pe.edu.ucv.cafetin.app.ui
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ripple
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
@@ -17,8 +34,6 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -244,35 +259,71 @@ fun AppCafetin(
     }
 }
 
+/**
+ * Barra de papel con una línea tierra arriba. La pestaña actual se marca con un punto naranja bajo el
+ * nombre y el ícono en tierra; las demás quedan en tono suave. Cada pestaña ocupa al menos 64 dp de alto.
+ */
 @Composable
 private fun BarraPestanas(nav: NavHostController, rutaActual: String?, unidadesCarrito: Int) {
-    // Barra de papel con una línea tierra arriba y la pestaña actual en amarillo, como el menú del panel.
     val linea = MaterialTheme.colorScheme.onSurface
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.drawBehind { drawLine(linea, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1.5.dp.toPx()) },
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .drawBehind { drawLine(linea, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1.5.dp.toPx()) }
+            .navigationBarsPadding()
+            .selectableGroup()
+            .padding(top = 8.dp, bottom = 6.dp),
     ) {
         PESTANAS.forEach { p ->
-            NavigationBarItem(
-                selected = rutaActual == p.ruta,
-                onClick = { irAPestana(nav, p.ruta) },
-                label = { Text(p.titulo.uppercase(), style = MaterialTheme.typography.labelSmall) },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = Paleta.amarillo,
-                    selectedIconColor = Paleta.tierra,
-                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-                icon = {
-                    if (p.ruta == Rutas.CARRITO && unidadesCarrito > 0) {
-                        BadgedBox(badge = { Badge(containerColor = Paleta.naranja, contentColor = Paleta.enColor) { Text("$unidadesCarrito") } }) { Icon(painterResource(p.icono), contentDescription = null) }
-                    } else {
-                        Icon(painterResource(p.icono), contentDescription = null)
-                    }
-                },
+            Pestana(
+                pestana = p,
+                elegida = rutaActual == p.ruta,
+                insignia = if (p.ruta == Rutas.CARRITO && unidadesCarrito > 0) unidadesCarrito else null,
+                alPulsar = { irAPestana(nav, p.ruta) },
+                modifier = Modifier.weight(1f),
             )
         }
+    }
+}
+
+@Composable
+private fun Pestana(pestana: Pestana, elegida: Boolean, insignia: Int?, alPulsar: () -> Unit, modifier: Modifier = Modifier) {
+    val oscuro = isSystemInDarkTheme()
+    val activo = if (oscuro) Paleta.amarillo else Paleta.tierra
+    val color by animateColorAsState(if (elegida) activo else MaterialTheme.colorScheme.onSurfaceVariant, label = "color")
+    val punto by animateFloatAsState(if (elegida) 1f else 0f, animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f), label = "punto")
+    Column(
+        modifier
+            .heightIn(min = 64.dp)
+            .selectable(
+                selected = elegida,
+                onClick = alPulsar,
+                role = Role.Tab,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = false, radius = 36.dp),
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+    ) {
+        val icono = @Composable { Icon(painterResource(pestana.icono), contentDescription = null, tint = color, modifier = Modifier.size(24.dp)) }
+        if (insignia != null) {
+            BadgedBox(badge = { Badge(containerColor = Paleta.naranja, contentColor = Paleta.enColor) { Text("$insignia") } }) { icono() }
+        } else {
+            icono()
+        }
+        Text(
+            pestana.titulo.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            fontWeight = if (elegida) FontWeight.Bold else FontWeight.Medium,
+        )
+        Box(
+            Modifier
+                .size(6.dp)
+                .graphicsLayer { scaleX = punto; scaleY = punto; alpha = punto }
+                .background(if (oscuro) Paleta.amarillo else Paleta.naranja, CircleShape),
+        )
     }
 }
 

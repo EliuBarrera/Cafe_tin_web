@@ -14,6 +14,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +38,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
 import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -126,13 +126,18 @@ private val TONOS_CATEGORIA = listOf(
 
 /**
  * Avatar del producto: la API no tiene fotos, así que en vez de imágenes de relleno (que prometerían algo
- * que no es) se muestra un ícono de la comida ([Comida]) o, si no se reconoce, la inicial, sobre un tono
- * que identifica la categoría. `conIcono = false` deja solo la inicial (p. ej. para un cafetín).
+ * que no es) se muestra un ícono a color de la comida ([Comida]), sin fondo. Si no se reconoce, la inicial
+ * sobre un tono que identifica la categoría. `conIcono = false` deja solo la inicial (p. ej. para un cafetín).
  */
 @Composable
 fun AvatarProducto(nombre: String, categoria: String?, tamano: Dp = 56.dp, conIcono: Boolean = true) {
     val comida = if (conIcono) remember(nombre, categoria) { Comida.de(nombre, categoria) } else null
-    val color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Paleta.tierra
+    if (comida != null) {
+        Box(Modifier.size(tamano).clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
+            Image(painterResource(comida.icono), contentDescription = null, modifier = Modifier.size(tamano * 0.9f))
+        }
+        return
+    }
     val tono = TONOS_CATEGORIA[Math.floorMod((categoria ?: "").hashCode(), TONOS_CATEGORIA.size)]
     Box(
         Modifier.size(tamano).clip(RoundedCornerShape(tamano / 3.5f))
@@ -140,17 +145,13 @@ fun AvatarProducto(nombre: String, categoria: String?, tamano: Dp = 56.dp, conIc
             .clearAndSetSemantics { },
         contentAlignment = Alignment.Center,
     ) {
-        if (comida != null) {
-            Icon(painterResource(comida.icono), contentDescription = null, tint = color, modifier = Modifier.size(tamano * 0.55f))
-        } else {
-            Text(
-                nombre.trim().take(1).uppercase(),
-                fontSize = (tamano.value * 0.42f).sp,
-                fontFamily = ArchivoExpandida,
-                fontWeight = FontWeight.Black,
-                color = color,
-            )
-        }
+        Text(
+            nombre.trim().take(1).uppercase(),
+            fontSize = (tamano.value * 0.42f).sp,
+            fontFamily = ArchivoExpandida,
+            fontWeight = FontWeight.Black,
+            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Paleta.tierra,
+        )
     }
 }
 

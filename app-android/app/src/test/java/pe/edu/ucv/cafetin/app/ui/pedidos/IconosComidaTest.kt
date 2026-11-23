@@ -9,11 +9,11 @@ class IconosComidaTest {
     @Test
     fun productosDelSeedTienenIcono() {
         assertEquals(Comida.PLATO, Comida.de("Menú del día", "Menú"))
-        assertEquals(Comida.PAN, Comida.de("Tamal criollo", "Desayunos"))
+        assertEquals(Comida.TAMAL, Comida.de("Tamal criollo", "Desayunos"))
         assertEquals(Comida.SANDWICH, Comida.de("Pan con chicharrón", "Desayunos"))
-        assertEquals(Comida.PAN, Comida.de("Empanada de ají", "Desayunos"))
+        assertEquals(Comida.EMPANADA, Comida.de("Empanada de ají", "Desayunos"))
         assertEquals(Comida.BEBIDA, Comida.de("Chicha morada 400 ml", "Bebidas"))
-        assertEquals(Comida.BEBIDA, Comida.de("Jugo de piña 500 ml", "Bebidas"))
+        assertEquals(Comida.JUGO, Comida.de("Jugo de piña 500 ml", "Bebidas"))
         assertEquals(Comida.CAFE, Comida.de("Café pasado", "Bebidas"))
         assertEquals(Comida.GALLETA, Comida.de("Galletas de avena", "Snacks"))
         assertEquals(Comida.SNACK, Comida.de("Papas fritas 40 g", "Snacks"))
@@ -24,6 +24,8 @@ class IconosComidaTest {
         assertEquals(Comida.SNACK, Comida.de("Tequeños", null)) // no es "te"
         assertEquals(Comida.TORTA, Comida.de("Arroz con leche", null)) // antes que "arroz"
         assertEquals(Comida.CAFE, Comida.de("CHOCOLATE CALIENTE", null))
+        assertEquals(Comida.EMPANADA, Comida.de("Empanada de pollo", null)) // antes que "pollo"
+        assertEquals(Comida.SANDWICH, Comida.de("Pan con pollo", null))
     }
 
     @Test
